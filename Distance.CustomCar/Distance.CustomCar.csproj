@@ -4,7 +4,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{7BCB2908-B003-45D9-BE68-50CBA5217603}</ProjectGuid>
+    <ProjectGuid>{9C6774B2-4645-478D-95A9-FC416D5E54BB}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Distance.CustomCar</RootNamespace>
@@ -121,19 +121,6 @@
     <TransformOutOfDateOnly>false</TransformOutOfDateOnly>
   </PropertyGroup>
   <Import Project="$(VSToolsPath)\TextTemplating\Microsoft.TextTemplating.targets" />
-  <Target Name="CreateModFolder" AfterTargets="AfterBuild">
-    <ItemGroup>
-      <ModContent Include="$(ProjectDir)\..\$(ProjectName).Content\Mod\**\*.*" />
-    </ItemGroup>
-    <PropertyGroup>
-      <BuildDestination>$(SolutionDir)Build/$(ProjectName)</BuildDestination>
-      <ModFolder>$(BuildDestination)\Centrifuge\Mods\$(ProjectName)</ModFolder>
-      <GSLFolder>$(BuildDestination)\Centrifuge\GameSupport</GSLFolder>
-    </PropertyGroup>
-    <MakeDir Directories="$(ModFolder)" />
-    <MakeDir Directories="$(GSLFolder)" />
-    <Copy SourceFiles="@(ModContent)" DestinationFiles="@(ModContent->'$(ModFolder)\%(RecursiveDir)%(Filename)%(Extension)')" />
-    <Copy SourceFiles="$(OutDir)Centrifuge.Distance.dll" DestinationFolder="$(GSLFolder)" />
-    <Copy SourceFiles="$(OutDir)$(ProjectName).dll" DestinationFolder="$(ModFolder)" />
-  </Target>
+	<Import Project="$(SolutionDir)Tool.BuildTargets\Distance.Modding.props"/>
+	<Import Project="$(SolutionDir)Tool.BuildTargets\Distance.Modding.targets"/>
 </Project>
