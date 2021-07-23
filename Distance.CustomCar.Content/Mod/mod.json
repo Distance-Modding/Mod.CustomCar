@@ -3,7 +3,9 @@
 	"Author": "Nico (larnin)",
 	"Contact": "SteamID : larnin - Discord : Nico#5480",
 	"ModuleFileName": "Distance.CustomCar.dll",
-	"Dependencies": [],
+	"RequiredGSLs": [
+		"com.github.reherc/Centrifuge.Distance"
+	],
 	"SkipLoad": false,
 	"Priority": 9
 }
