@@ -121,6 +121,5 @@
     <TransformOutOfDateOnly>false</TransformOutOfDateOnly>
   </PropertyGroup>
   <Import Project="$(VSToolsPath)\TextTemplating\Microsoft.TextTemplating.targets" />
-	<Import Project="$(SolutionDir)Tool.BuildTargets\Distance.Modding.props"/>
 	<Import Project="$(SolutionDir)Tool.BuildTargets\Distance.Modding.targets"/>
 </Project>

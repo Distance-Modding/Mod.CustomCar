@@ -1,3 +1,6 @@
 [submodule "Tool.BuildTargets"]
 	path = Tool.BuildTargets
 	url = https://github.com/Distance-Modding/Tool.BuildTargets
+[submodule "Tool.ProjectTargets"]
+	path = Tool.ProjectTargets
+	url = https://github.com/Distance-Modding/Tool.ProjectTargets
