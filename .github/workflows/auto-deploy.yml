@@ -1,0 +1,46 @@
+name: Build and Release
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "*.md"
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - "*.md"
+  workflow_dispatch:
+jobs:
+  build:
+    name: Build and Publish GitHub Release
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - name: DotEnv
+        uses: xom9ikk/dotenv@v1.0.2
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v1.0.2
+      - name: Setup NuGet
+        uses: NuGet/setup-nuget@v1.0.5
+      - name: Restore Solution Packages
+        run: nuget restore $env:SOLUTION
+      - name: Build Solution
+        run: msbuild $env:SOLUTION -m
+      - name: Format Artifact List
+        id: artifacts
+        uses: frabert/replace-string-action@v2.0
+        with:
+          string: ${{ env.ARTIFACTS }}
+          pattern: ';'
+          replace-with: '\n'
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: "Workflow-Automated Deployment [#${{ github.run_number }}]"
+          tag_name: release-workflow-${{ github.run_number }}
+          body: "${{ env.RELEASE_BODY }}"
+          files: "${{ steps.artifacts.outputs.replaced }}"
