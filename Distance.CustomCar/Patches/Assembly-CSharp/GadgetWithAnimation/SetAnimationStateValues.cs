@@ -1,7 +1,7 @@
 ﻿using HarmonyLib;
 using UnityEngine;
 
-namespace Distance.CustomCar.Harmony
+namespace Distance.CustomCar.Patches
 {
 	[HarmonyPatch(typeof(GadgetWithAnimation), "SetAnimationStateValues")]
 	internal static class GadgetWithAnimation__SetAnimationStateValues

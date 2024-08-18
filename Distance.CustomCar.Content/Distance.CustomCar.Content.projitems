@@ -9,11 +9,6 @@
     <Import_RootNamespace>Distance.CustomCar.Content</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <Content Include="$(MSBuildThisFileDirectory)Mod\mod.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)Mod\Assets\Backgrounds\Corruptor" />
     <None Include="$(MSBuildThisFileDirectory)Mod\Assets\Nitronic Rush\Avenger" />
     <None Include="$(MSBuildThisFileDirectory)Mod\Assets\Nitronic Rush\Commander" />

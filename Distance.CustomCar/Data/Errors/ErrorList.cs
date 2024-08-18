@@ -1,6 +1,4 @@
-﻿using Centrifuge.Distance.Data;
-using Centrifuge.Distance.Game;
-using Reactor.API.Logging;
+﻿using BepInEx.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,9 +7,9 @@ namespace Distance.CustomCar.Data.Errors
 {
 	public class ErrorList : List<string>
 	{
-		private readonly Log logger_;
+		private readonly ManualLogSource logger_;
 
-		public ErrorList(Log logger)
+		public ErrorList(ManualLogSource logger)
 		{
 			logger_ = logger;
 		}
@@ -19,13 +17,13 @@ namespace Distance.CustomCar.Data.Errors
 		public new void Add(string value)
 		{
 			base.Add(value);
-			logger_.Error(value);
+			logger_.LogInfo(value);
 		}
 
 		public void Add(Exception value)
 		{
 			base.Add(value.ToString());
-			logger_.Exception(value);
+			logger_.LogInfo(value);
 		}
 
 		public void Show()

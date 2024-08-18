@@ -1,8 +1,8 @@
 ﻿using HarmonyLib;
 
-namespace Distance.CustomCar.Harmony
+namespace Distance.CustomCar.Patches
 {
-	[HarmonyPatch(typeof(Profile), "SetColorsForAllCars")]
+	[HarmonyPatch(typeof(Profile), "SetColorsForAllCars", new System.Type[] { typeof(CarColors) })]
 	internal static class Profile__SetColorsForAllCars
 	{
 		[HarmonyPrefix]

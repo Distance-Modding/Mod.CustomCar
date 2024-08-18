@@ -2,7 +2,7 @@
 using HarmonyLib;
 using UnityEngine;
 
-namespace Distance.CustomCar.Harmony
+namespace Distance.CustomCar.Patches
 {
 	[HarmonyPatch(typeof(CarAudio), "OnCarHornEvent")]
 	internal static class OnCarHornEvent
@@ -12,7 +12,7 @@ namespace Distance.CustomCar.Harmony
 		{
 			int carIndex = G.Sys.ProfileManager_.knownCars_[__instance.carLogic_.PlayerData_.CarName_];
 
-			if (carIndex >= Mod.DefaultCarCount && Mod.Instance.Config.UseTrumpetHorn)
+			if (carIndex >= Mod.DefaultCarCount && Mod.UseTrumpetHorn.Value)
 			{
 				__instance.phantom_.SetRTPCValue("Horn_volume", Mathf.Clamp01(data.hornPercent_ + 0.5f));
 				__instance.phantom_.Play("SpookyHorn", getEvent: true);

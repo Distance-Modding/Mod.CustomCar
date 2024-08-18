@@ -1,6 +1,6 @@
 ﻿using HarmonyLib;
 
-namespace Distance.CustomCar.Harmony
+namespace Distance.CustomCar.Patches
 {
 	[HarmonyPatch(typeof(Profile), "Awake")]
 	internal static class Profile__Awake

@@ -1,6 +1,4 @@
 ﻿using Distance.CustomCar.Data.Materials;
-using Reactor.API;
-using Reactor.API.Storage;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -24,7 +22,7 @@ namespace Distance.CustomCar.Data.Car
 			{
 				try
 				{
-					Mod.Instance.Logger.Info($"Creating car prefab for {car.Key} ...");
+					Mod.Log.LogInfo($"Creating car prefab for {car.Key} ...");
 					CreateCarReturnInfos data = CreateCar(car.Value);
 
 					string fileName = Path.GetFileNameWithoutExtension(car.Key.Substring(0, car.Key.LastIndexOf('(') - 1));
@@ -34,6 +32,7 @@ namespace Distance.CustomCar.Data.Car
 				}
 				catch (Exception ex)
 				{
+					Mod.Log.LogInfo($"Could not load car prefab: {car.Key}");
 					Mod.Instance.Errors.Add($"Could not load car prefab: {car.Key}");
 					Mod.Instance.Errors.Add(ex);
 				}
@@ -44,7 +43,7 @@ namespace Distance.CustomCar.Data.Car
 
 		private void RegisterCars(List<CreateCarReturnInfos> carsInfos)
 		{
-			Mod.Instance.Logger.Info($"Registering {carsInfos.Count} car(s)...");
+			Mod.Log.LogInfo($"Registering {carsInfos.Count} car(s)...");
 
 			ProfileManager profileManager = G.Sys.ProfileManager_;
 			CarInfo[] oldCars = profileManager.carInfos_.ToArray();
@@ -81,10 +80,10 @@ namespace Distance.CustomCar.Data.Car
 				else
 				{
 					Mod.Instance.Errors.Add($"A car with the name {car.name_} is already registered, rename the car file if they're the same.");
-					Mod.Instance.Logger.Warning($"Generating unique name for car {car.name_}");
+					Mod.Log.LogInfo($"Generating unique name for car {car.name_}");
 
 					string uniqueID = $"#{Guid.NewGuid():B}";
-					Mod.Instance.Logger.Info($"Using GUID: {uniqueID}");
+					Mod.Log.LogInfo($"Using GUID: {uniqueID}");
 
 					car.name_ = $"[FFFF00]![-] {car.name_} {uniqueID}";
 
@@ -118,7 +117,7 @@ namespace Distance.CustomCar.Data.Car
 		private Dictionary<string, GameObject> LoadAssetsBundles()
 		{
 			Dictionary<string, GameObject> assetsList = new Dictionary<string, GameObject>();
-			DirectoryInfo assetsDirectory = GetLocalFolder(Defaults.PrivateAssetsDirectory);
+			DirectoryInfo assetsDirectory = GetLocalFolder("Assets");
 			DirectoryInfo globalCarsDirectory = new DirectoryInfo(Path.Combine(Resource.personalDistanceDirPath_, "CustomCars"));
 
 			if (!globalCarsDirectory.Exists)
@@ -130,7 +129,9 @@ namespace Distance.CustomCar.Data.Car
 				catch (Exception ex)
 				{
 					Mod.Instance.Errors.Add($"Could not create the following folder: {globalCarsDirectory.FullName}");
+					Mod.Log.LogInfo($"Could not create the following folder: {globalCarsDirectory.FullName}");
 					Mod.Instance.Errors.Add(ex);
+					Mod.Log.LogInfo(ex);
 				}
 			}
 
@@ -140,6 +141,7 @@ namespace Distance.CustomCar.Data.Car
 				{
 					Assets assets = Assets.FromUnsafePath(assetsFile.FullName);
 					AssetBundle bundle = assets.Bundle as AssetBundle;
+					
 
 					int foundPrefabCount = 0;
 
@@ -159,12 +161,15 @@ namespace Distance.CustomCar.Data.Car
 					if (foundPrefabCount == 0)
 					{
 						Mod.Instance.Errors.Add($"Can't find a prefab in the asset bundle: {assetsFile.FullName}");
+						Mod.Log.LogInfo($"Can't find a prefab in the asset bundle: {assetsFile.FullName}");
 					}
 				}
 				catch (Exception ex)
 				{
 					Mod.Instance.Errors.Add($"Could not load assets file: {assetsFile.FullName}");
+					Mod.Log.LogInfo($"Could not load assets file: {assetsFile.FullName}");
 					Mod.Instance.Errors.Add(ex);
+					Mod.Log.LogInfo(ex);
 				}
 			}
 
@@ -211,12 +216,14 @@ namespace Distance.CustomCar.Data.Car
 			if (wheelsToRemove.Count != 4)
 			{
 				Mod.Instance.Errors.Add($"Found {wheelsToRemove.Count} wheels on base prefabs, expected 4");
+				Mod.Log.LogInfo($"Found {wheelsToRemove.Count} wheels on base prefabs, expected 4");
 			}
 
 			Transform refractor = obj.transform.Find("Refractor");
 			if (refractor == null)
 			{
 				Mod.Instance.Errors.Add("Can't find the Refractor object on the base car prefab");
+				Mod.Log.LogInfo("Can't find the Refractor object on the base car prefab");
 				return;
 			}
 
@@ -243,6 +250,7 @@ namespace Distance.CustomCar.Data.Car
 			if (colorChanger == null)
 			{
 				Mod.Instance.Errors.Add("Can't find the ColorChanger component on the base car");
+				Mod.Log.LogInfo("Can't find the ColorChanger component on the base car");
 				return;
 			}
 
@@ -280,6 +288,7 @@ namespace Distance.CustomCar.Data.Car
 				if (!infos_.materials.TryGetValue(materialNames[materialIndex], out MaterialInfos materialInfo))
 				{
 					Mod.Instance.Errors.Add($"Can't find the material {materialNames[materialIndex]} on {renderer.gameObject.FullName()}");
+					Mod.Log.LogInfo($"Can't find the material {materialNames[materialIndex]} on {renderer.gameObject.FullName()}");
 					continue;
 				}
 
@@ -339,12 +348,14 @@ namespace Distance.CustomCar.Data.Car
 					if (arguments.Length != 3)
 					{
 						Mod.Instance.Errors.Add($"{arguments[0]} property on {renderer.gameObject.FullName()} must have 2 arguments");
+						Mod.Log.LogInfo($"{arguments[0]} property on {renderer.gameObject.FullName()} must have 2 arguments");
 						continue;
 					}
 
 					if (!int.TryParse(arguments[1], out int index))
 					{
 						Mod.Instance.Errors.Add($"First argument of {arguments[0]} on {renderer.gameObject.FullName()} property must be a number");
+						Mod.Log.LogInfo($"First argument of {arguments[0]} on {renderer.gameObject.FullName()} property must be a number");
 						continue;
 					}
 
@@ -358,12 +369,14 @@ namespace Distance.CustomCar.Data.Car
 					if (arguments.Length != 5)
 					{
 						Mod.Instance.Errors.Add($"{arguments[0]} property on {renderer.gameObject.FullName()} must have 4 arguments");
+						Mod.Log.LogInfo($"{arguments[0]} property on {renderer.gameObject.FullName()} must have 4 arguments");
 						continue;
 					}
 
 					if (!int.TryParse(arguments[1], out int index))
 					{
 						Mod.Instance.Errors.Add($"First argument of {arguments[0]} on {renderer.gameObject.FullName()} property must be a number");
+						Mod.Log.LogInfo($"First argument of {arguments[0]} on {renderer.gameObject.FullName()} property must be a number");
 						continue;
 					}
 
@@ -388,6 +401,7 @@ namespace Distance.CustomCar.Data.Car
 					if (!found)
 					{
 						Mod.Instance.Errors.Add($"The property {arguments[2]} on {renderer.gameObject.FullName()} is not valid");
+						Mod.Log.LogInfo($"The property {arguments[2]} on {renderer.gameObject.FullName()} is not valid");
 						continue;
 					}
 
@@ -490,6 +504,7 @@ namespace Distance.CustomCar.Data.Car
 				if (arguments.Length != 6)
 				{
 					Mod.Instance.Errors.Add($"{arguments[0]} property on {transform.gameObject.FullName()} must have 5 arguments");
+					Mod.Log.LogInfo($"{arguments[0]} property on {transform.gameObject.FullName()} must have 5 arguments");
 					continue;
 				}
 
@@ -565,6 +580,7 @@ namespace Distance.CustomCar.Data.Car
 			if (visuals == null)
 			{
 				Mod.Instance.Errors.Add("Can't find the CarVisuals component on the base car");
+				Mod.Log.LogInfo("Can't find the CarVisuals component on the base car");
 				return;
 			}
 
@@ -591,12 +607,14 @@ namespace Distance.CustomCar.Data.Car
 			if (mesh == null)
 			{
 				Mod.Instance.Errors.Add($"The mesh on {renderer.gameObject.FullName()} is null");
+				Mod.Log.LogInfo($"The mesh on {renderer.gameObject.FullName()} is null");
 				return;
 			}
 
 			if (!mesh.isReadable)
 			{
 				Mod.Instance.Errors.Add($"Can't read the car mesh {mesh.name} on {renderer.gameObject.FullName()}You must allow reading on it's unity inspector !");
+				Mod.Log.LogInfo($"Can't read the car mesh {mesh.name} on {renderer.gameObject.FullName()}You must allow reading on it's unity inspector !");
 				return;
 			}
 
