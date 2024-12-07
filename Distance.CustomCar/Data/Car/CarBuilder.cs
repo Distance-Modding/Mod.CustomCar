@@ -173,6 +173,55 @@ namespace Distance.CustomCar.Data.Car
 				}
 			}
 
+			try
+            {
+				DirectoryInfo otherAssetsDirectory = new DirectoryInfo(Path.Combine(Directory.GetParent(Directory.GetParent(Path.GetDirectoryName(System.Reflection.Assembly.GetCallingAssembly().Location)).ToString()).ToString(), "Assets"));
+
+				foreach (FileInfo assetsFile in otherAssetsDirectory.GetFiles("*", SearchOption.AllDirectories).Concat(globalCarsDirectory.GetFiles("*", SearchOption.AllDirectories)).OrderBy(x => x.Name))
+				{
+					try
+                    {
+						Assets assets = Assets.FromUnsafePath(assetsFile.FullName);
+						AssetBundle bundle = assets.Bundle as AssetBundle;
+
+						int foundPrefabCount = 0;
+
+						foreach (string assetName in from name in bundle.GetAllAssetNames() where name.EndsWith(".prefab", StringComparison.InvariantCultureIgnoreCase) select name)
+                        {
+							GameObject carPrefab = bundle.LoadAsset<GameObject>(assetName);
+
+							string assetKey = $"{assetsFile.FullName} ({assetName})";
+
+							if (!assetsList.ContainsKey(assetKey))
+							{
+								assetsList.Add(assetKey, carPrefab);
+								foundPrefabCount++;
+							}
+						}
+
+						if (foundPrefabCount == 0)
+						{
+							Mod.Instance.Errors.Add($"Can't find a prefab in the asset bundle: {assetsFile.FullName}");
+							Mod.Log.LogInfo($"Can't find a prefab in the asset bundle: {assetsFile.FullName}");
+						}
+					}
+					catch (Exception ex)
+                    {
+						Mod.Instance.Errors.Add($"Could not load assets file: {assetsFile.FullName}");
+						Mod.Log.LogInfo($"Could not load assets file: {assetsFile.FullName}");
+						Mod.Instance.Errors.Add(ex);
+						Mod.Log.LogInfo(ex);
+					}
+				}
+			}
+			catch (Exception ex)
+            {
+				Mod.Log.LogInfo($"Could not find assets file in the top level directory. This is not bad, this just means no cars were downloaded from the Thunderstore");
+				Mod.Log.LogInfo(ex);
+            }
+
+			
+
 			return assetsList;
 		}
 
