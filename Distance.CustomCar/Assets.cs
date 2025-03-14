@@ -29,7 +29,7 @@ namespace Distance.CustomCar
 
             if (!File.Exists(FilePath))
             {
-                Mod.Log.LogInfo($"Couldn't find requested asset bundle at {FilePath}");
+                Mod.Log.LogError($"Couldn't find requested asset bundle at {FilePath}");
                 return;
             }
 
@@ -45,7 +45,7 @@ namespace Distance.CustomCar
         {
             if (!File.Exists(filePath))
             {
-                Mod.Log.LogInfo($"Could not find requested asset bundle at {filePath}");
+                Mod.Log.LogError($"Could not find requested asset bundle at {filePath}");
                 return null;
             }
 
@@ -114,7 +114,7 @@ namespace Distance.CustomCar
                 return type;
             }
 
-            Mod.Log.LogInfo($"Type {fullName} wasn't found in the main AppDomain at this moment.");
+            Mod.Log.LogError($"Type {fullName} wasn't found in the main AppDomain at this moment.");
             throw new Exception($"Type {fullName} wasn't found in the main AppDomain at this moment.");
         }
     }

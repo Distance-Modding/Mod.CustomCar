@@ -32,7 +32,7 @@ namespace Distance.CustomCar.Data.Car
 				}
 				catch (Exception ex)
 				{
-					Mod.Log.LogInfo($"Could not load car prefab: {car.Key}");
+					Mod.Log.LogError($"Could not load car prefab: {car.Key}");
 					Mod.Instance.Errors.Add($"Could not load car prefab: {car.Key}");
 					Mod.Instance.Errors.Add(ex);
 				}
@@ -129,9 +129,9 @@ namespace Distance.CustomCar.Data.Car
 				catch (Exception ex)
 				{
 					Mod.Instance.Errors.Add($"Could not create the following folder: {globalCarsDirectory.FullName}");
-					Mod.Log.LogInfo($"Could not create the following folder: {globalCarsDirectory.FullName}");
+					Mod.Log.LogError($"Could not create the following folder: {globalCarsDirectory.FullName}");
 					Mod.Instance.Errors.Add(ex);
-					Mod.Log.LogInfo(ex);
+					Mod.Log.LogError(ex);
 				}
 			}
 
@@ -161,15 +161,15 @@ namespace Distance.CustomCar.Data.Car
 					if (foundPrefabCount == 0)
 					{
 						Mod.Instance.Errors.Add($"Can't find a prefab in the asset bundle: {assetsFile.FullName}");
-						Mod.Log.LogInfo($"Can't find a prefab in the asset bundle: {assetsFile.FullName}");
+						Mod.Log.LogError($"Can't find a prefab in the asset bundle: {assetsFile.FullName}");
 					}
 				}
 				catch (Exception ex)
 				{
 					Mod.Instance.Errors.Add($"Could not load assets file: {assetsFile.FullName}");
-					Mod.Log.LogInfo($"Could not load assets file: {assetsFile.FullName}");
+					Mod.Log.LogError($"Could not load assets file: {assetsFile.FullName}");
 					Mod.Instance.Errors.Add(ex);
-					Mod.Log.LogInfo(ex);
+					Mod.Log.LogError(ex);
 				}
 			}
 
@@ -202,25 +202,65 @@ namespace Distance.CustomCar.Data.Car
 						if (foundPrefabCount == 0)
 						{
 							Mod.Instance.Errors.Add($"Can't find a prefab in the asset bundle: {assetsFile.FullName}");
-							Mod.Log.LogInfo($"Can't find a prefab in the asset bundle: {assetsFile.FullName}");
+							Mod.Log.LogError($"Can't find a prefab in the asset bundle: {assetsFile.FullName}");
 						}
 					}
 					catch (Exception ex)
                     {
 						Mod.Instance.Errors.Add($"Could not load assets file: {assetsFile.FullName}");
-						Mod.Log.LogInfo($"Could not load assets file: {assetsFile.FullName}");
+						Mod.Log.LogError($"Could not load assets file: {assetsFile.FullName}");
 						Mod.Instance.Errors.Add(ex);
-						Mod.Log.LogInfo(ex);
+						Mod.Log.LogError(ex);
 					}
 				}
 			}
 			catch (Exception ex)
             {
-				Mod.Log.LogInfo($"Could not find assets file in the top level directory. This is not bad, this just means no cars were downloaded from the Thunderstore");
-				Mod.Log.LogInfo(ex);
+				Mod.Log.LogWarning($"Could not find the Assets folder in the toplevel directory. This is fine don't worry about it.");
+				Mod.Log.LogWarning(ex);
             }
 
-			
+			DirectoryInfo profileDirectory = new DirectoryInfo(Directory.GetParent(Path.GetDirectoryName(System.Reflection.Assembly.GetCallingAssembly().Location)).ToString());
+
+			foreach (FileInfo assetsFile in profileDirectory.GetFiles("*", SearchOption.AllDirectories).Concat(globalCarsDirectory.GetFiles("*", SearchOption.AllDirectories)).OrderBy(x => x.Name))
+			{
+				if (assetsFile.Extension == "")
+                {
+					try
+					{
+						Assets assets = Assets.FromUnsafePath(assetsFile.FullName);
+						AssetBundle bundle = assets.Bundle as AssetBundle;
+
+						int foundPrefabCount = 0;
+
+						foreach (string assetName in from name in bundle.GetAllAssetNames() where name.EndsWith(".prefab", StringComparison.InvariantCultureIgnoreCase) select name)
+						{
+							GameObject carPrefab = bundle.LoadAsset<GameObject>(assetName);
+
+							string assetKey = $"{assetsFile.FullName} ({assetName})";
+
+							if (!assetsList.ContainsKey(assetKey))
+							{
+								assetsList.Add(assetKey, carPrefab);
+								foundPrefabCount++;
+							}
+						}
+
+						if (foundPrefabCount == 0)
+						{
+							Mod.Instance.Errors.Add($"Can't find a prefab in the asset bundle: {assetsFile.FullName}");
+							Mod.Log.LogError($"Can't find a prefab in the asset bundle: {assetsFile.FullName}");
+						}
+					}
+					catch (Exception ex)
+					{
+						Mod.Instance.Errors.Add($"Could not load assets file: {assetsFile.FullName}");
+						Mod.Log.LogError($"Could not load assets file: {assetsFile.FullName}");
+						Mod.Instance.Errors.Add(ex);
+						Mod.Log.LogError(ex);
+					}
+				}
+			}
 
 			return assetsList;
 		}
@@ -265,14 +305,14 @@ namespace Distance.CustomCar.Data.Car
 			if (wheelsToRemove.Count != 4)
 			{
 				Mod.Instance.Errors.Add($"Found {wheelsToRemove.Count} wheels on base prefabs, expected 4");
-				Mod.Log.LogInfo($"Found {wheelsToRemove.Count} wheels on base prefabs, expected 4");
+				Mod.Log.LogError($"Found {wheelsToRemove.Count} wheels on base prefabs, expected 4");
 			}
 
 			Transform refractor = obj.transform.Find("Refractor");
 			if (refractor == null)
 			{
 				Mod.Instance.Errors.Add("Can't find the Refractor object on the base car prefab");
-				Mod.Log.LogInfo("Can't find the Refractor object on the base car prefab");
+				Mod.Log.LogError("Can't find the Refractor object on the base car prefab");
 				return;
 			}
 
@@ -299,7 +339,7 @@ namespace Distance.CustomCar.Data.Car
 			if (colorChanger == null)
 			{
 				Mod.Instance.Errors.Add("Can't find the ColorChanger component on the base car");
-				Mod.Log.LogInfo("Can't find the ColorChanger component on the base car");
+				Mod.Log.LogError("Can't find the ColorChanger component on the base car");
 				return;
 			}
 
@@ -337,7 +377,7 @@ namespace Distance.CustomCar.Data.Car
 				if (!infos_.materials.TryGetValue(materialNames[materialIndex], out MaterialInfos materialInfo))
 				{
 					Mod.Instance.Errors.Add($"Can't find the material {materialNames[materialIndex]} on {renderer.gameObject.FullName()}");
-					Mod.Log.LogInfo($"Can't find the material {materialNames[materialIndex]} on {renderer.gameObject.FullName()}");
+					Mod.Log.LogError($"Can't find the material {materialNames[materialIndex]} on {renderer.gameObject.FullName()}");
 					continue;
 				}
 
@@ -397,14 +437,14 @@ namespace Distance.CustomCar.Data.Car
 					if (arguments.Length != 3)
 					{
 						Mod.Instance.Errors.Add($"{arguments[0]} property on {renderer.gameObject.FullName()} must have 2 arguments");
-						Mod.Log.LogInfo($"{arguments[0]} property on {renderer.gameObject.FullName()} must have 2 arguments");
+						Mod.Log.LogError($"{arguments[0]} property on {renderer.gameObject.FullName()} must have 2 arguments");
 						continue;
 					}
 
 					if (!int.TryParse(arguments[1], out int index))
 					{
 						Mod.Instance.Errors.Add($"First argument of {arguments[0]} on {renderer.gameObject.FullName()} property must be a number");
-						Mod.Log.LogInfo($"First argument of {arguments[0]} on {renderer.gameObject.FullName()} property must be a number");
+						Mod.Log.LogError($"First argument of {arguments[0]} on {renderer.gameObject.FullName()} property must be a number");
 						continue;
 					}
 
@@ -418,14 +458,14 @@ namespace Distance.CustomCar.Data.Car
 					if (arguments.Length != 5)
 					{
 						Mod.Instance.Errors.Add($"{arguments[0]} property on {renderer.gameObject.FullName()} must have 4 arguments");
-						Mod.Log.LogInfo($"{arguments[0]} property on {renderer.gameObject.FullName()} must have 4 arguments");
+						Mod.Log.LogError($"{arguments[0]} property on {renderer.gameObject.FullName()} must have 4 arguments");
 						continue;
 					}
 
 					if (!int.TryParse(arguments[1], out int index))
 					{
 						Mod.Instance.Errors.Add($"First argument of {arguments[0]} on {renderer.gameObject.FullName()} property must be a number");
-						Mod.Log.LogInfo($"First argument of {arguments[0]} on {renderer.gameObject.FullName()} property must be a number");
+						Mod.Log.LogError($"First argument of {arguments[0]} on {renderer.gameObject.FullName()} property must be a number");
 						continue;
 					}
 
@@ -450,7 +490,7 @@ namespace Distance.CustomCar.Data.Car
 					if (!found)
 					{
 						Mod.Instance.Errors.Add($"The property {arguments[2]} on {renderer.gameObject.FullName()} is not valid");
-						Mod.Log.LogInfo($"The property {arguments[2]} on {renderer.gameObject.FullName()} is not valid");
+						Mod.Log.LogError($"The property {arguments[2]} on {renderer.gameObject.FullName()} is not valid");
 						continue;
 					}
 
@@ -553,7 +593,7 @@ namespace Distance.CustomCar.Data.Car
 				if (arguments.Length != 6)
 				{
 					Mod.Instance.Errors.Add($"{arguments[0]} property on {transform.gameObject.FullName()} must have 5 arguments");
-					Mod.Log.LogInfo($"{arguments[0]} property on {transform.gameObject.FullName()} must have 5 arguments");
+					Mod.Log.LogError($"{arguments[0]} property on {transform.gameObject.FullName()} must have 5 arguments");
 					continue;
 				}
 
@@ -656,14 +696,14 @@ namespace Distance.CustomCar.Data.Car
 			if (mesh == null)
 			{
 				Mod.Instance.Errors.Add($"The mesh on {renderer.gameObject.FullName()} is null");
-				Mod.Log.LogInfo($"The mesh on {renderer.gameObject.FullName()} is null");
+				Mod.Log.LogError($"The mesh on {renderer.gameObject.FullName()} is null");
 				return;
 			}
 
 			if (!mesh.isReadable)
 			{
 				Mod.Instance.Errors.Add($"Can't read the car mesh {mesh.name} on {renderer.gameObject.FullName()}You must allow reading on it's unity inspector !");
-				Mod.Log.LogInfo($"Can't read the car mesh {mesh.name} on {renderer.gameObject.FullName()}You must allow reading on it's unity inspector !");
+				Mod.Log.LogError($"Can't read the car mesh {mesh.name} on {renderer.gameObject.FullName()}You must allow reading on it's unity inspector !");
 				return;
 			}
 
