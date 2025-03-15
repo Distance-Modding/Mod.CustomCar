@@ -135,43 +135,50 @@ namespace Distance.CustomCar.Data.Car
 				}
 			}
 
-			foreach (FileInfo assetsFile in assetsDirectory.GetFiles("*", SearchOption.AllDirectories).Concat(globalCarsDirectory.GetFiles("*", SearchOption.AllDirectories)).OrderBy(x => x.Name))
+			try
 			{
-				try
+				foreach (FileInfo assetsFile in assetsDirectory.GetFiles("*", SearchOption.AllDirectories).Concat(globalCarsDirectory.GetFiles("*", SearchOption.AllDirectories)).OrderBy(x => x.Name))
 				{
-					Assets assets = Assets.FromUnsafePath(assetsFile.FullName);
-					AssetBundle bundle = assets.Bundle as AssetBundle;
-					
-
-					int foundPrefabCount = 0;
-
-					foreach (string assetName in from name in bundle.GetAllAssetNames() where name.EndsWith(".prefab", StringComparison.InvariantCultureIgnoreCase) select name)
+					try
 					{
-						GameObject carPrefab = bundle.LoadAsset<GameObject>(assetName);
+						Assets assets = Assets.FromUnsafePath(assetsFile.FullName);
+						AssetBundle bundle = assets.Bundle as AssetBundle;
 
-						string assetKey = $"{assetsFile.FullName} ({assetName})";
 
-						if (!assetsList.ContainsKey(assetKey))
+						int foundPrefabCount = 0;
+
+						foreach (string assetName in from name in bundle.GetAllAssetNames() where name.EndsWith(".prefab", StringComparison.InvariantCultureIgnoreCase) select name)
 						{
-							assetsList.Add(assetKey, carPrefab);
-							foundPrefabCount++;
+							GameObject carPrefab = bundle.LoadAsset<GameObject>(assetName);
+
+							string assetKey = $"{assetsFile.FullName} ({assetName})";
+
+							if (!assetsList.ContainsKey(assetKey))
+							{
+								assetsList.Add(assetKey, carPrefab);
+								foundPrefabCount++;
+							}
+						}
+
+						if (foundPrefabCount == 0)
+						{
+							Mod.Instance.Errors.Add($"Can't find a prefab in the asset bundle: {assetsFile.FullName}");
+							Mod.Log.LogError($"Can't find a prefab in the asset bundle: {assetsFile.FullName}");
 						}
 					}
-
-					if (foundPrefabCount == 0)
+					catch (Exception ex)
 					{
-						Mod.Instance.Errors.Add($"Can't find a prefab in the asset bundle: {assetsFile.FullName}");
-						Mod.Log.LogError($"Can't find a prefab in the asset bundle: {assetsFile.FullName}");
+						Mod.Instance.Errors.Add($"Could not load assets file: {assetsFile.FullName}");
+						Mod.Log.LogError($"Could not load assets file: {assetsFile.FullName}");
+						Mod.Instance.Errors.Add(ex);
+						Mod.Log.LogError(ex);
 					}
 				}
-				catch (Exception ex)
-				{
-					Mod.Instance.Errors.Add($"Could not load assets file: {assetsFile.FullName}");
-					Mod.Log.LogError($"Could not load assets file: {assetsFile.FullName}");
-					Mod.Instance.Errors.Add(ex);
-					Mod.Log.LogError(ex);
-				}
 			}
+			catch(Exception ex)
+            {
+				Mod.Log.LogWarning("No Assets folder in the custom car folder.");
+            }
 
 			try
             {
@@ -216,8 +223,7 @@ namespace Distance.CustomCar.Data.Car
 			}
 			catch (Exception ex)
             {
-				Mod.Log.LogWarning($"Could not find the Assets folder in the toplevel directory. This is fine don't worry about it.");
-				Mod.Log.LogWarning(ex);
+				Mod.Log.LogWarning($"No Assets folder in toplevel directory.");
             }
 
 			DirectoryInfo profileDirectory = new DirectoryInfo(Directory.GetParent(Path.GetDirectoryName(System.Reflection.Assembly.GetCallingAssembly().Location)).ToString());

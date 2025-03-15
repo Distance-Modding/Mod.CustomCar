@@ -15,7 +15,7 @@ namespace Distance.CustomCar
         //Mod Details
         private const string modGUID = "Distance.CustomCar";
         private const string modName = "Custom Car";
-        private const string modVersion = "1.1.0";
+        private const string modVersion = "1.1.2";
 
         //Config Entry Strings
         public static string UseTrumpetKey = "Use Trumpet Horn";
