@@ -1,5 +1,5 @@
-﻿using Newtonsoft.Json;
-using Formatting = Newtonsoft.Json.Formatting;
+﻿using JsonFx.Json;
+using JsonFx.Serialization;
 using System;
 using System.IO;
 using System.Reflection;
@@ -25,35 +25,38 @@ namespace Distance.CustomCar
 
             if (File.Exists(FilePath))
             {
+                bool saveLater = false;
+
                 using (var sr = new StreamReader(FilePath))
                 {
-                    var json = sr.ReadToEnd();
+                    string json = sr.ReadToEnd();
+                    JsonReader reader = new JsonReader();
                     Section sec = null;
 
                     try
                     {
-                        sec = JsonConvert.DeserializeObject<Section>(json);
-                    }
-                    catch (JsonException je)
-                    {
-                        Mod.Log.LogInfo(je);
+                        sec = reader.Read<Section>(json);
                     }
                     catch (Exception e)
                     {
-                        Mod.Log.LogInfo(e);
+                        Mod.Log.LogWarning(e);
+                        saveLater = true;
                     }
-
-                    Mod.Log.LogInfo("Just Deserialized the json");
 
                     if (sec != null)
                     {
-                        foreach (var k in sec.Keys)
+                        foreach (string k in sec.Keys)
+                        {
                             Add(k, sec[k]);
+                        }
                     }
                 }
-            }
 
-            Dirty = false;
+                if (saveLater)
+                {
+                    Save();
+                }
+            }
         }
 
         public void Save(bool formatJson = true)
@@ -61,29 +64,20 @@ namespace Distance.CustomCar
             if (!Directory.Exists(SettingsDirectory))
                 Directory.CreateDirectory(SettingsDirectory);
 
+            DataWriterSettings st = new DataWriterSettings { PrettyPrint = formatJson };
+            JsonWriter writer = new JsonWriter(st);
+
             try
             {
                 using (var sw = new StreamWriter(FilePath, false))
                 {
-                    sw.WriteLine(JsonConvert.SerializeObject(this, Formatting.Indented));
+                    sw.WriteLine(writer.Write(this));
                 }
-
-                Dirty = false;
-            }
-            catch (JsonException je)
-            {
-                Mod.Log.LogInfo(je);
             }
             catch (Exception e)
             {
-                Mod.Log.LogInfo(e);
+                Mod.Log.LogWarning(e);
             }
-        }
-
-        public void SaveIfDirty(bool formatJson = true)
-        {
-            if (Dirty)
-                Save(formatJson);
         }
     }
 }

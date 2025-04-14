@@ -21,19 +21,21 @@ namespace Distance.CustomCar
 			Save();
 		}
 
-		protected Section Profile(string profileName)
+		protected Dictionary<string, object> Profile(string profileName)
 		{
-			return Config.GetOrCreate(profileName, new Section());
+			Mod.Log.LogInfo("Assigning Profile Name...");
+			return Config.GetOrCreate(profileName, new Dictionary<string, object>());
 		}
 
-		protected Section Vehicle(string profileName, string vehicleName)
+		protected Dictionary<string, object> Vehicle(string profileName, string vehicleName)
 		{
-			return Profile(profileName).GetOrCreate(vehicleName, new Section());
+			Mod.Log.LogInfo("Assigning Vehicle Name...");
+			return Profile(profileName).GetOrCreate(vehicleName, new Dictionary<string, object>());
 		}
 
 		protected CarColors GetCarColors(string profileName, string vehicleName)
 		{
-			Section vehicle = Vehicle(profileName, vehicleName);
+			Dictionary<string, object> vehicle = Vehicle(profileName, vehicleName);
 			CarColors colors = new CarColors
 			{
 				primary_ = GetColor(vehicle, "primary", Colors.whiteSmoke),
@@ -45,28 +47,29 @@ namespace Distance.CustomCar
 			return colors;
 		}
 
-		protected Color GetColor(Section vehicle, string category, Color defaultColor)
+		protected Color GetColor(Dictionary<string, object> vehicle, string category, Color defaultColor)
 		{
-			Section color = vehicle.GetOrCreate(category, new Section());
+				//Mod.Log.LogWarning(e);
+				Dictionary<string, object> color = vehicle.GetOrCreate(category, new Dictionary<string, object>());
 
-			var r = color.GetOrCreate("r", defaultColor.r);
-			var g = color.GetOrCreate("g", defaultColor.g);
-			var b = color.GetOrCreate("b", defaultColor.b);
-			var a = color.GetOrCreate("a", defaultColor.a);
+				float r = color.GetOrCreate("r", defaultColor.r);
+				float g = color.GetOrCreate("g", defaultColor.g);
+				float b = color.GetOrCreate("b", defaultColor.b);
+				float a = color.GetOrCreate("a", defaultColor.a);
 
-			return new Color(r, g, b, a);
+				return new Color(r, g, b, a);
 		}
 
 		protected void SetCarColors(string profileName, string vehicleName, CarColors colors)
 		{
-			Section vehicle = Vehicle(profileName, vehicleName);
+			Dictionary<string, object> vehicle = Vehicle(profileName, vehicleName);
 
 			vehicle["primary"] = ToSection(colors.primary_);
 			vehicle["secondary"] = ToSection(colors.secondary_);
 			vehicle["glow"] = ToSection(colors.glow_);
 			vehicle["sparkle"] = ToSection(colors.sparkle_);
 
-			Section profile = Profile(profileName);
+			Dictionary<string, object> profile = Profile(profileName);
 			profile[vehicleName] = vehicle;
 
 			Config[profileName] = profile;
@@ -108,7 +111,9 @@ namespace Distance.CustomCar
 					}
 
 					CarInfo carInfo = profileManager.CarInfos_[carIndex];
+					Mod.Log.LogInfo($"Getting car color in {currentProfile.FileName_}'s profile for the {carInfo.name_} car");
 					CarColors colors = GetCarColors(currentProfile.FileName_, carInfo.name_);
+					
 
 					carColors[carIndex] = colors;
 				}

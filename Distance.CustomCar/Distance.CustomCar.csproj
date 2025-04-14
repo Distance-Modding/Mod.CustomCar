@@ -42,6 +42,9 @@
     <Reference Include="BepInEx">
       <HintPath>..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Distance\BepInEx\core\BepInEx.dll</HintPath>
     </Reference>
+    <Reference Include="JsonFx, Version=2.0.1209.2802, Culture=neutral, PublicKeyToken=315052dd637f8a52, processorArchitecture=MSIL">
+      <HintPath>..\packages\JsonFx.2.0.1209.2802\lib\net35\JsonFx.dll</HintPath>
+    </Reference>
     <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Json.Net.Unity3D.9.0.1\lib\net35\Newtonsoft.Json.dll</HintPath>
     </Reference>
@@ -65,6 +68,7 @@
     <Compile Include="Data\Materials\MaterialPropertyExport.cs" />
     <Compile Include="Data\Materials\MaterialPropertyInfo.cs" />
     <Compile Include="Data\Materials\PropertyType.cs" />
+    <Compile Include="Extensions\System\Collections\Generic\DictionaryExtensions.cs" />
     <Compile Include="Extensions\UnityEngine\UnityEngine\GameObject.cs" />
     <Compile Include="FileSystem.cs" />
     <Compile Include="MessageBox.cs" />

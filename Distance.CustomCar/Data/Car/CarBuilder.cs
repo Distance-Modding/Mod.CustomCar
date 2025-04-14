@@ -135,7 +135,7 @@ namespace Distance.CustomCar.Data.Car
 				}
 			}
 
-			try
+			/*try
 			{
 				foreach (FileInfo assetsFile in assetsDirectory.GetFiles("*", SearchOption.AllDirectories).Concat(globalCarsDirectory.GetFiles("*", SearchOption.AllDirectories)).OrderBy(x => x.Name))
 				{
@@ -178,9 +178,9 @@ namespace Distance.CustomCar.Data.Car
 			catch(Exception ex)
             {
 				Mod.Log.LogWarning("No Assets folder in the custom car folder.");
-            }
+            }*/
 
-			try
+			/*try
             {
 				DirectoryInfo otherAssetsDirectory = new DirectoryInfo(Path.Combine(Directory.GetParent(Directory.GetParent(Path.GetDirectoryName(System.Reflection.Assembly.GetCallingAssembly().Location)).ToString()).ToString(), "Assets"));
 
@@ -224,7 +224,7 @@ namespace Distance.CustomCar.Data.Car
 			catch (Exception ex)
             {
 				Mod.Log.LogWarning($"No Assets folder in toplevel directory.");
-            }
+            }*/
 
 			DirectoryInfo profileDirectory = new DirectoryInfo(Directory.GetParent(Path.GetDirectoryName(System.Reflection.Assembly.GetCallingAssembly().Location)).ToString());
 
