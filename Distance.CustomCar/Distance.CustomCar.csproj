@@ -36,13 +36,13 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="0Harmony">
-      <HintPath>$(DistanceGameDir)\BepInEx\core\0Harmony.dll</HintPath>
+      <HintPath>$(SolutionDir)lib\0Harmony.dll</HintPath>
     </Reference>
     <Reference Include="Assembly-CSharp">
-      <HintPath>$(SolutionDir)publicized_assemblies\Assembly-CSharp.dll</HintPath>
+      <HintPath>$(SolutionDir)lib\Assembly-CSharp.dll</HintPath>
     </Reference>
     <Reference Include="BepInEx">
-      <HintPath>$(DistanceGameDir)\BepInEx\core\BepInEx.dll</HintPath>
+      <HintPath>$(SolutionDir)lib\BepInEx.dll</HintPath>
     </Reference>
     <Reference Include="JsonFx, Version=2.0.1209.2802, Culture=neutral, PublicKeyToken=315052dd637f8a52, processorArchitecture=MSIL">
       <HintPath>..\packages\JsonFx.2.0.1209.2802\lib\net35\JsonFx.dll</HintPath>
@@ -57,7 +57,7 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
     <Reference Include="UnityEngine">
-      <HintPath>$(DistanceGameDir)\Distance_Data\Managed\UnityEngine.dll</HintPath>
+      <HintPath>$(SolutionDir)lib\UnityEngine.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -111,10 +111,10 @@
   <Target Name="EnsurePublicizedAssembly" BeforeTargets="BeforeBuild">
     <PropertyGroup>
       <_GameAssembly>$(DistanceGameDir)\Distance_Data\Managed\Assembly-CSharp.dll</_GameAssembly>
-      <_PublicizedAssembly>$(SolutionDir)publicized_assemblies\Assembly-CSharp.dll</_PublicizedAssembly>
+      <_PublicizedAssembly>$(SolutionDir)lib\Assembly-CSharp.dll</_PublicizedAssembly>
       <_PublicizerScript>$(SolutionDir)tools\Publicize\Publicize.ps1</_PublicizerScript>
     </PropertyGroup>
     <Exec Command="powershell.exe -ExecutionPolicy Bypass -File &quot;$(_PublicizerScript)&quot; -InputPath &quot;$(_GameAssembly)&quot; -OutputPath &quot;$(_PublicizedAssembly)&quot;" Condition="!Exists('$(_PublicizedAssembly)') And Exists('$(_GameAssembly)')" />
-    <Warning Text="Could not find game assembly at $(_GameAssembly). Set the DistanceGameDir property or environment variable to the Distance game directory." Condition="!Exists('$(_GameAssembly)')" />
+    <Warning Text="Could not find game assembly at $(_GameAssembly). If building from CI, the committed lib\Assembly-CSharp.dll will be used. Set DistanceGameDir to regenerate it." Condition="!Exists('$(_GameAssembly)')" />
   </Target>
 </Project>
