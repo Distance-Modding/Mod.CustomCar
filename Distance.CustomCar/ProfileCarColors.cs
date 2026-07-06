@@ -23,14 +23,12 @@ namespace Distance.CustomCar
 
 		protected Dictionary<string, object> Profile(string profileName)
 		{
-			Mod.Log.LogInfo("Assigning Profile Name...");
-			return Config.GetOrCreate(profileName, new Dictionary<string, object>());
+			return Config.GetOrCreate(profileName, () => new Dictionary<string, object>());
 		}
 
 		protected Dictionary<string, object> Vehicle(string profileName, string vehicleName)
 		{
-			Mod.Log.LogInfo("Assigning Vehicle Name...");
-			return Profile(profileName).GetOrCreate(vehicleName, new Dictionary<string, object>());
+			return Profile(profileName).GetOrCreate(vehicleName, () => new Dictionary<string, object>());
 		}
 
 		protected CarColors GetCarColors(string profileName, string vehicleName)
@@ -50,7 +48,7 @@ namespace Distance.CustomCar
 		protected Color GetColor(Dictionary<string, object> vehicle, string category, Color defaultColor)
 		{
 				//Mod.Log.LogWarning(e);
-				Dictionary<string, object> color = vehicle.GetOrCreate(category, new Dictionary<string, object>());
+				Dictionary<string, object> color = vehicle.GetOrCreate(category, () => new Dictionary<string, object>());
 
 				float r = color.GetOrCreate("r", defaultColor.r);
 				float g = color.GetOrCreate("g", defaultColor.g);

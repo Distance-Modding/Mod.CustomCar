@@ -79,6 +79,18 @@ namespace Distance.CustomCar
             return GetItem<T>(key);
         }
 
+        public T GetOrCreate<T>(string key, Func<T> factory) where T : class
+        {
+            if (!ContainsKey(key))
+            {
+                T value = factory();
+                this[key] = value;
+                ValueChanged?.Invoke(this, new SettingsChangedEventArgs(key, null, this[key]));
+                return value;
+            }
+            return (T)this[key];
+        }
+
         public bool ContainsKey<T>(string key)
         {
             try
