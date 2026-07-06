@@ -22,6 +22,7 @@ namespace Distance.CustomCar.Data.Car
         public int Version { get; set; } = 1;
         public string CombinedHash { get; set; } = string.Empty;
         public Dictionary<string, CarCacheEntry> Files { get; set; } = new Dictionary<string, CarCacheEntry>();
+        public Dictionary<string, string> InvalidFiles { get; set; } = new Dictionary<string, string>();
 
         public static string GetFileSignature(string filePath)
         {
@@ -44,6 +45,56 @@ namespace Distance.CustomCar.Data.Car
                 combined.Append('|');
             }
             return combined.ToString();
+        }
+
+        public static bool HasValidBundleSignature(string filePath)
+        {
+            try
+            {
+                using (var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    if (stream.Length < 8)
+                        return false;
+
+                    byte[] header = new byte[8];
+                    if (stream.Read(header, 0, 8) != 8)
+                        return false;
+
+                    if (header[0] == 'U' && header[1] == 'n' && header[2] == 'i' && header[3] == 't' &&
+                        header[4] == 'y' && header[5] == 'F' && header[6] == 'S')
+                        return true;
+
+                    if (header[0] == 'U' && header[1] == 'n' && header[2] == 'i' && header[3] == 't' &&
+                        header[4] == 'y' && header[5] == 'R' && header[6] == 'a' && header[7] == 'w')
+                        return true;
+
+                    if (header[0] == 'U' && header[1] == 'n' && header[2] == 'i' && header[3] == 't' &&
+                        header[4] == 'y' && header[5] == 'W' && header[6] == 'e' && header[7] == 'b')
+                        return true;
+
+                    return false;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public bool IsFileInvalid(string filePath, string currentSignature)
+        {
+            if (string.IsNullOrEmpty(currentSignature))
+                return true;
+
+            if (!InvalidFiles.TryGetValue(filePath, out string cachedSignature))
+                return false;
+
+            return cachedSignature == currentSignature;
+        }
+
+        public void MarkFileInvalid(string filePath, string signature)
+        {
+            InvalidFiles[filePath] = signature;
         }
 
         public void Load()
@@ -93,12 +144,22 @@ namespace Distance.CustomCar.Data.Car
                     }
                 }
 
-                Mod.Log.LogInfo($"Loaded car cache from {CachePath} ({Files.Count} file(s))");
+                if (data.TryGetValue("InvalidFiles", out object invalidVal) && invalidVal is Dictionary<string, object> invalidDict)
+                {
+                    foreach (var kv in invalidDict)
+                    {
+                        if (kv.Value != null)
+                            InvalidFiles[kv.Key] = kv.Value.ToString();
+                    }
+                }
+
+                Mod.Log.LogInfo($"Loaded car cache from {CachePath} ({Files.Count} file(s), {InvalidFiles.Count} invalid)");
             }
             catch (Exception ex)
             {
                 Mod.Log.LogWarning($"Failed to load car cache: {ex.Message}");
                 Files.Clear();
+                InvalidFiles.Clear();
             }
         }
 
@@ -118,11 +179,16 @@ namespace Distance.CustomCar.Data.Car
                     filesDict[kv.Key] = entryDict;
                 }
 
+                var invalidDict = new Dictionary<string, object>();
+                foreach (var kv in InvalidFiles)
+                    invalidDict[kv.Key] = kv.Value;
+
                 var data = new Dictionary<string, object>
                 {
                     ["Version"] = Version,
                     ["CombinedHash"] = CombinedHash,
-                    ["Files"] = filesDict
+                    ["Files"] = filesDict,
+                    ["InvalidFiles"] = invalidDict
                 };
 
                 string cacheDir = Path.GetDirectoryName(CachePath);
@@ -133,7 +199,7 @@ namespace Distance.CustomCar.Data.Car
                 string json = writer.Write(data);
                 File.WriteAllText(CachePath, json);
 
-                Mod.Log.LogInfo($"Saved car cache to {CachePath} ({Files.Count} file(s))");
+                Mod.Log.LogInfo($"Saved car cache to {CachePath} ({Files.Count} file(s), {InvalidFiles.Count} invalid)");
             }
             catch (Exception ex)
             {
