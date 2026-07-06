@@ -1,11 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.31515.178
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36811.4 d17.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Distance.CustomCar.Content", "Distance.CustomCar.Content\Distance.CustomCar.Content.shproj", "{66D3AB1B-9B89-4736-80DF-3390AF77E996}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Distance.CustomCar", "Distance.CustomCar\Distance.CustomCar.csproj", "{9C6774B2-4645-478D-95A9-FC416D5E54BB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Distance.CustomCar.Tests", "Distance.CustomCar.Tests\Distance.CustomCar.Tests.csproj", "{B3F2A1D4-5E6C-4F8A-9B0D-1C2D3E4F5A6B}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{08A1C9FA-7DC2-4A60-B9A6-AC0EB7132893}"
 	ProjectSection(SolutionItems) = preProject
@@ -16,9 +18,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	EndProjectSection
 EndProject
 Global
-	GlobalSection(SharedMSBuildProjectFiles) = preSolution
-		Distance.CustomCar.Content\Distance.CustomCar.Content.projitems*{66d3ab1b-9b89-4736-80df-3390af77e996}*SharedItemsImports = 13
-	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
@@ -28,11 +27,18 @@ Global
 		{9C6774B2-4645-478D-95A9-FC416D5E54BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9C6774B2-4645-478D-95A9-FC416D5E54BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9C6774B2-4645-478D-95A9-FC416D5E54BB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B3F2A1D4-5E6C-4F8A-9B0D-1C2D3E4F5A6B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B3F2A1D4-5E6C-4F8A-9B0D-1C2D3E4F5A6B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B3F2A1D4-5E6C-4F8A-9B0D-1C2D3E4F5A6B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B3F2A1D4-5E6C-4F8A-9B0D-1C2D3E4F5A6B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E6970D48-CD23-4427-951B-448B144F30DA}
+	EndGlobalSection
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		Distance.CustomCar.Content\Distance.CustomCar.Content.projitems*{66d3ab1b-9b89-4736-80df-3390af77e996}*SharedItemsImports = 13
 	EndGlobalSection
 EndGlobal

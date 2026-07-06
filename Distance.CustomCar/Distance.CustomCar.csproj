@@ -14,6 +14,7 @@
     <Deterministic>true</Deterministic>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DistanceGameDir Condition="'$(DistanceGameDir)' == ''">$(DISTANCE_GAME_DIR)</DistanceGameDir>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -34,13 +35,13 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="0Harmony">
-      <HintPath>..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Distance\BepInEx\core\0Harmony.dll</HintPath>
+      <HintPath>$(SolutionDir)libs\0Harmony.dll</HintPath>
     </Reference>
     <Reference Include="Assembly-CSharp">
-      <HintPath>..\..\publicized_assemblies\Assembly-CSharp.dll</HintPath>
+      <HintPath>$(SolutionDir)libs\Assembly-CSharp.dll</HintPath>
     </Reference>
     <Reference Include="BepInEx">
-      <HintPath>..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Distance\BepInEx\core\BepInEx.dll</HintPath>
+      <HintPath>$(SolutionDir)libs\BepInEx.dll</HintPath>
     </Reference>
     <Reference Include="JsonFx, Version=2.0.1209.2802, Culture=neutral, PublicKeyToken=315052dd637f8a52, processorArchitecture=MSIL">
       <HintPath>..\packages\JsonFx.2.0.1209.2802\lib\net35\JsonFx.dll</HintPath>
@@ -55,12 +56,13 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
     <Reference Include="UnityEngine">
-      <HintPath>..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Distance\Distance_Data\Managed\UnityEngine.dll</HintPath>
+      <HintPath>$(SolutionDir)libs\UnityEngine.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets.cs" />
     <Compile Include="Data\Car\CarBuilder.cs" />
+    <Compile Include="Data\Car\CarCache.cs" />
     <Compile Include="Data\Car\CarInfos.cs" />
     <Compile Include="Data\Car\CreateCarReturnInfos.cs" />
     <Compile Include="Data\Errors\ErrorList.cs" />
@@ -105,4 +107,13 @@
   </PropertyGroup>
   <Import Project="$(VSToolsPath)\TextTemplating\Microsoft.TextTemplating.targets" />
   <Import Project="$(SolutionDir)Tool.BuildTargets\Distance.Modding.targets" />
+  <Target Name="EnsurePublicizedAssembly" BeforeTargets="BeforeBuild">
+    <PropertyGroup>
+      <_GameAssembly>$(DistanceGameDir)\Distance_Data\Managed\Assembly-CSharp.dll</_GameAssembly>
+      <_PublicizedAssembly>$(SolutionDir)libs\Assembly-CSharp.dll</_PublicizedAssembly>
+      <_PublicizerScript>$(SolutionDir)tools\Publicize\Publicize.ps1</_PublicizerScript>
+    </PropertyGroup>
+    <Exec Command="powershell.exe -ExecutionPolicy Bypass -File &quot;$(_PublicizerScript)&quot; -InputPath &quot;$(_GameAssembly)&quot; -OutputPath &quot;$(_PublicizedAssembly)&quot;" Condition="!Exists('$(_PublicizedAssembly)') And Exists('$(_GameAssembly)')" />
+    <Warning Text="Could not find game assembly at $(_GameAssembly). Set the DistanceGameDir property or environment variable to the Distance game directory." Condition="!Exists('$(_GameAssembly)')" />
+  </Target>
 </Project>

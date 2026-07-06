@@ -1,4 +1,5 @@
-﻿#pragma warning disable RCS1110
+#pragma warning disable RCS1110
+using System;
 using System.Collections.Generic;
 
 public static class DictionaryExtensions
@@ -51,5 +52,16 @@ public static class DictionaryExtensions
         }
 
         return obj.GetItem<T>(key);
+    }
+
+    public static T GetOrCreate<T>(this Dictionary<string, object> obj, string key, Func<T> factory) where T : class
+    {
+        if (!obj.ContainsKey(key))
+        {
+            T value = factory();
+            obj[key] = value;
+            return value;
+        }
+        return (T)obj[key];
     }
 }

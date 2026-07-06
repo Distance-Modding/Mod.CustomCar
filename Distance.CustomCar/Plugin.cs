@@ -72,9 +72,11 @@ namespace Distance.CustomCar
             CarBuilder carBuilder = new CarBuilder();
 
             carBuilder.CreateCars(carInfos);
-            
+
             TotalCarCount = profileManager.CarInfos_.Length;
             CarColors.LoadAll();
+
+            Mod.Log.LogInfo($"Custom cars loaded: {ModdedCarCount} modded / {TotalCarCount} total");
 
             Errors.Show();
         }
