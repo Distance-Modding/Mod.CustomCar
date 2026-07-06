@@ -177,7 +177,21 @@ namespace Distance.CustomCar.Data.Car
 								batchDone.Set();
 						});
 					}
-					batchDone.WaitOne();
+					if (!batchDone.WaitOne(30000))
+					{
+						Mod.Log.LogWarning($"Bundle batch {(batchStart / batchSize) + 1} timed out after 30s — incomplete results will be skipped. Check your asset files for corruption.");
+						for (int i = 0; i < batchCount; i++)
+						{
+							if (batchResults[i].FilePath == null)
+							{
+								batchResults[i] = new BundleLoadResult
+								{
+									FilePath = allFiles[batchStart + i].FullName,
+									Error = new TimeoutException("Bundle loading timed out after 30 seconds — the file may be corrupted")
+								};
+							}
+						}
+					}
 				}
 
 				foreach (BundleLoadResult result in batchResults)
