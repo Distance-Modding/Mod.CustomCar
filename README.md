@@ -4,49 +4,31 @@ BepInEx mod for Distance that loads custom car models from asset bundles.
 
 ## Requirements
 
+- Distance installed via Steam (default path: `C:\Program Files (x86)\Steam\steamapps\common\Distance`)
 - [BepInEx](https://github.com/BepInEx/BepInEx) 5.x installed in your Distance game directory
 - .NET Framework 3.5 SDK (installed with Visual Studio 2022 Community or Build Tools)
 
-## Setup
+## Build
 
-### 1. Reference DLLs
-
-Before building, copy the following DLLs from your Distance game installation into the `libs/` folder:
-
-| File | Source |
-|---|---|
-| `0Harmony.dll` | `<GameDir>\BepInEx\core\0Harmony.dll` |
-| `BepInEx.dll` | `<GameDir>\BepInEx\core\BepInEx.dll` |
-| `UnityEngine.dll` | `<GameDir>\Distance_Data\Managed\UnityEngine.dll` |
-
-The publicized `Assembly-CSharp.dll` is auto-generated during the build — no manual copy needed.
-
-### 2. Set the game directory
-
-Set the `DISTANCE_GAME_DIR` environment variable to your Distance install path:
+By default, the project references DLLs from your Steam installation path. If Distance is installed elsewhere, set the `DISTANCE_GAME_DIR` environment variable:
 
 ```powershell
-# PowerShell
 $env:DISTANCE_GAME_DIR = "G:\SteamLibrary\steamapps\common\Distance"
 ```
 
-Or pass it via MSBuild:
+Or pass it at build time:
 
 ```powershell
-msbuild /p:DistanceGameDir="G:\SteamLibrary\steamapps\common\Distance"
+msbuild Distance.CustomCar.sln /p:Configuration=Debug /p:DistanceGameDir="G:\SteamLibrary\steamapps\common\Distance"
 ```
 
-### 3. Build
+The publicized `publicized_assemblies\Assembly-CSharp.dll` is auto-generated on first build (requires `DistanceGameDir` to find the game's `Assembly-CSharp.dll`).
 
-```powershell
-msbuild Distance.CustomCar.sln /p:Configuration=Debug /p:DistanceGameDir="%DISTANCE_GAME_DIR%"
-```
+You can also open `Distance.CustomCar.sln` in Visual Studio 2022 and build from there.
 
-Or open `Distance.CustomCar.sln` in Visual Studio 2022 and build from there.
+## Deploy
 
-### 4. Deploy
-
-Copy the output DLL from `Distance.CustomCar\bin\Debug\Distance.CustomCar.dll` to your BepInEx plugins folder:
+Copy `Distance.CustomCar\bin\Debug\Distance.CustomCar.dll` to your BepInEx plugins folder:
 
 ```
 <GameDir>\BepInEx\plugins\Distance.CustomCar\Distance.CustomCar.dll

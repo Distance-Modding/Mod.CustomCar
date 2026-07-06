@@ -15,6 +15,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <DistanceGameDir Condition="'$(DistanceGameDir)' == ''">$(DISTANCE_GAME_DIR)</DistanceGameDir>
+    <DistanceGameDir Condition="'$(DistanceGameDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Distance</DistanceGameDir>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -35,13 +36,13 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="0Harmony">
-      <HintPath>$(SolutionDir)libs\0Harmony.dll</HintPath>
+      <HintPath>$(DistanceGameDir)\BepInEx\core\0Harmony.dll</HintPath>
     </Reference>
     <Reference Include="Assembly-CSharp">
-      <HintPath>$(SolutionDir)libs\Assembly-CSharp.dll</HintPath>
+      <HintPath>$(SolutionDir)publicized_assemblies\Assembly-CSharp.dll</HintPath>
     </Reference>
     <Reference Include="BepInEx">
-      <HintPath>$(SolutionDir)libs\BepInEx.dll</HintPath>
+      <HintPath>$(DistanceGameDir)\BepInEx\core\BepInEx.dll</HintPath>
     </Reference>
     <Reference Include="JsonFx, Version=2.0.1209.2802, Culture=neutral, PublicKeyToken=315052dd637f8a52, processorArchitecture=MSIL">
       <HintPath>..\packages\JsonFx.2.0.1209.2802\lib\net35\JsonFx.dll</HintPath>
@@ -56,7 +57,7 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
     <Reference Include="UnityEngine">
-      <HintPath>$(SolutionDir)libs\UnityEngine.dll</HintPath>
+      <HintPath>$(DistanceGameDir)\Distance_Data\Managed\UnityEngine.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -110,7 +111,7 @@
   <Target Name="EnsurePublicizedAssembly" BeforeTargets="BeforeBuild">
     <PropertyGroup>
       <_GameAssembly>$(DistanceGameDir)\Distance_Data\Managed\Assembly-CSharp.dll</_GameAssembly>
-      <_PublicizedAssembly>$(SolutionDir)libs\Assembly-CSharp.dll</_PublicizedAssembly>
+      <_PublicizedAssembly>$(SolutionDir)publicized_assemblies\Assembly-CSharp.dll</_PublicizedAssembly>
       <_PublicizerScript>$(SolutionDir)tools\Publicize\Publicize.ps1</_PublicizerScript>
     </PropertyGroup>
     <Exec Command="powershell.exe -ExecutionPolicy Bypass -File &quot;$(_PublicizerScript)&quot; -InputPath &quot;$(_GameAssembly)&quot; -OutputPath &quot;$(_PublicizedAssembly)&quot;" Condition="!Exists('$(_PublicizedAssembly)') And Exists('$(_GameAssembly)')" />
