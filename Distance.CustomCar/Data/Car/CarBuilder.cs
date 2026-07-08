@@ -151,7 +151,7 @@ namespace Distance.CustomCar.Data.Car
 			List<FileInfo> validFiles = rawFiles;
 			HashSet<string> seenPaths = new HashSet<string>();
 
-			int batchSize = Math.Max(2, Environment.ProcessorCount);
+			int batchSize = Math.Max(4, Environment.ProcessorCount);
 			for (int batchStart = 0; batchStart < validFiles.Count; batchStart += batchSize)
 			{
 				int batchEnd = Math.Min(batchStart + batchSize, validFiles.Count);
