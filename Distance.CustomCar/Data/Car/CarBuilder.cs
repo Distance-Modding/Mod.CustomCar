@@ -144,7 +144,7 @@ namespace Distance.CustomCar.Data.Car
 			List<FileInfo> rawFiles = new List<FileInfo>();
 			foreach (FileInfo f in profileDirectory.GetFiles("*", SearchOption.AllDirectories).Concat(globalCarsDirectory.GetFiles("*", SearchOption.AllDirectories)).OrderBy(x => x.Name))
 			{
-				if (f.Extension == "")
+				if (f.Extension == "" && HasValidBundleSignature(f.FullName))
 					rawFiles.Add(f);
 			}
 
@@ -152,9 +152,11 @@ namespace Distance.CustomCar.Data.Car
 			HashSet<string> seenPaths = new HashSet<string>();
 
 			int batchSize = Math.Max(4, Environment.ProcessorCount);
+			int totalBatches = (validFiles.Count + batchSize - 1) / batchSize;
 			for (int batchStart = 0; batchStart < validFiles.Count; batchStart += batchSize)
 			{
 				int batchEnd = Math.Min(batchStart + batchSize, validFiles.Count);
+				Mod.Log.LogInfo($"Batch {batchStart / batchSize + 1}/{totalBatches} ({batchEnd - batchStart} files)");
 				BundleLoadResult[] batchResults = new BundleLoadResult[batchEnd - batchStart];
 				int batchCount = batchResults.Length;
 				int loaded = 0;
@@ -245,6 +247,7 @@ namespace Distance.CustomCar.Data.Car
 				}
 			}
 
+			Mod.Log.LogInfo($"{assetsList.Count} prefab(s) loaded from {seenPaths.Count} file(s)");
 			prefabIndex.RemoveStaleEntries(seenPaths);
 			prefabIndex.Save();
 			return assetsList;
