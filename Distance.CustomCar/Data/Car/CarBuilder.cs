@@ -16,10 +16,7 @@ namespace Distance.CustomCar.Data.Car
 		{
 			infos_ = infos;
 
-			CarCache cache = new CarCache();
-			cache.Load();
-
-			Dictionary<string, GameObject> cars = LoadAssetsBundles(cache);
+			Dictionary<string, GameObject> cars = LoadAssetsBundles();
 
 			List<CreateCarReturnInfos> carsInfos = new List<CreateCarReturnInfos>();
 
@@ -42,14 +39,6 @@ namespace Distance.CustomCar.Data.Car
 					Mod.Instance.Errors.Add(ex);
 				}
 			}
-
-			if (cars.Count > 0)
-			{
-				int cachedCount = cache.Files.Count;
-				Mod.Log.LogInfo($"Car cache: {cachedCount} files tracked, {cars.Count} prefab(s) loaded");
-			}
-
-			cache.Save();
 
 			RegisterCars(carsInfos);
 		}
@@ -127,7 +116,7 @@ namespace Distance.CustomCar.Data.Car
 			}
 		}
 
-		private Dictionary<string, GameObject> LoadAssetsBundles(CarCache cache)
+		private Dictionary<string, GameObject> LoadAssetsBundles()
 		{
 			Dictionary<string, GameObject> assetsList = new Dictionary<string, GameObject>();
 			DirectoryInfo globalCarsDirectory = new DirectoryInfo(Path.Combine(Resource.personalDistanceDirPath_, "CustomCars"));
@@ -147,7 +136,9 @@ namespace Distance.CustomCar.Data.Car
 				}
 			}
 
-			Dictionary<string, string> currentHashes = new Dictionary<string, string>();
+			PrefabIndex prefabIndex = new PrefabIndex();
+			prefabIndex.Load();
+
 			DirectoryInfo profileDirectory = new DirectoryInfo(Directory.GetParent(Path.GetDirectoryName(System.Reflection.Assembly.GetCallingAssembly().Location)).ToString());
 
 			List<FileInfo> rawFiles = new List<FileInfo>();
@@ -157,27 +148,10 @@ namespace Distance.CustomCar.Data.Car
 					rawFiles.Add(f);
 			}
 
-			List<FileInfo> validFiles = new List<FileInfo>();
-			List<string> validSignatures = new List<string>();
-			int skippedInvalid = 0;
-			foreach (FileInfo file in rawFiles)
-			{
-				string sig = CarCache.GetFileSignature(file.FullName);
-				currentHashes[file.FullName] = sig;
-				if (cache.IsFileInvalid(file.FullName, sig))
-				{
-					skippedInvalid++;
-				}
-				else
-				{
-					validFiles.Add(file);
-					validSignatures.Add(sig);
-				}
-			}
-			if (skippedInvalid > 0)
-				Mod.Log.LogInfo($"Skipped {skippedInvalid} previously invalid file(s)");
+			List<FileInfo> validFiles = rawFiles;
+			HashSet<string> seenPaths = new HashSet<string>();
 
-			int batchSize = 4;
+			int batchSize = Math.Max(2, Environment.ProcessorCount);
 			for (int batchStart = 0; batchStart < validFiles.Count; batchStart += batchSize)
 			{
 				int batchEnd = Math.Min(batchStart + batchSize, validFiles.Count);
@@ -190,10 +164,9 @@ namespace Distance.CustomCar.Data.Car
 					{
 						int index = i;
 						FileInfo file = validFiles[batchStart + i];
-						string sig = validSignatures[batchStart + i];
 						ThreadPool.QueueUserWorkItem(_ =>
 						{
-							batchResults[index] = LoadBundle(file, sig);
+							batchResults[index] = LoadBundle(file);
 							if (Interlocked.Increment(ref loaded) == batchCount)
 								batchDone.Set();
 						});
@@ -208,7 +181,6 @@ namespace Distance.CustomCar.Data.Car
 								batchResults[i] = new BundleLoadResult
 								{
 									FilePath = validFiles[batchStart + i].FullName,
-									Signature = validSignatures[batchStart + i],
 									Error = new TimeoutException("Bundle loading timed out after 30 seconds — the file may be corrupted")
 								};
 							}
@@ -219,7 +191,7 @@ namespace Distance.CustomCar.Data.Car
 				foreach (BundleLoadResult result in batchResults)
 				{
 					string filePath = result.FilePath;
-					string signature = result.Signature;
+					seenPaths.Add(filePath);
 
 					if (result.Bundle == null)
 					{
@@ -230,25 +202,26 @@ namespace Distance.CustomCar.Data.Car
 							Mod.Instance.Errors.Add(result.Error);
 							Mod.Log.LogError(result.Error);
 						}
-						cache.MarkFileInvalid(filePath, signature);
 						continue;
 					}
 
 					AssetBundle bundle = result.Bundle;
-					bool isCached = cache.Files.ContainsKey(filePath) && cache.Files[filePath].Hash == signature;
 					string[] prefabNames;
 
-					if (isCached)
+					if (prefabIndex.IsUpToDate(filePath))
 					{
-						prefabNames = cache.GetPrefabNames(filePath);
-						if (prefabNames.Length == 0)
+						prefabNames = prefabIndex.GetPrefabNames(filePath);
+						if (prefabNames == null || prefabNames.Length == 0)
 							prefabNames = ScanBundleForPrefabs(bundle);
 					}
 					else
 					{
 						prefabNames = ScanBundleForPrefabs(bundle);
-						Mod.Log.LogInfo($"New/changed file: {Path.GetFileName(filePath)} ({prefabNames.Length} prefab(s))");
+						if (prefabNames.Length > 0)
+							Mod.Log.LogInfo($"Scanned: {Path.GetFileName(filePath)} ({prefabNames.Length} prefab(s))");
 					}
+
+					prefabIndex.SetPrefabNames(filePath, prefabNames);
 
 					int foundPrefabCount = 0;
 					foreach (string assetName in prefabNames)
@@ -268,59 +241,78 @@ namespace Distance.CustomCar.Data.Car
 						Mod.Log.LogError($"Can't find a prefab in the asset bundle: {filePath}");
 					}
 
-					cache.UpdateFile(filePath, signature, prefabNames);
 					bundle.Unload(false);
 				}
 			}
 
-			foreach (string cachedPath in new List<string>(cache.Files.Keys))
-			{
-				if (!currentHashes.ContainsKey(cachedPath))
-					cache.RemoveFile(cachedPath);
-			}
-
-			foreach (string invalidPath in new List<string>(cache.InvalidFiles.Keys))
-			{
-				if (!currentHashes.ContainsKey(invalidPath))
-					cache.InvalidFiles.Remove(invalidPath);
-			}
-
-			cache.CombinedHash = CarCache.ComputeCombinedHash(currentHashes);
+			prefabIndex.RemoveStaleEntries(seenPaths);
+			prefabIndex.Save();
 			return assetsList;
 		}
 
-		private static BundleLoadResult LoadBundle(FileInfo file, string signature)
+		private static bool HasValidBundleSignature(string filePath)
 		{
 			try
 			{
-				if (!CarCache.HasValidBundleSignature(file.FullName))
+				using (var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+				{
+					if (stream.Length < 8)
+						return false;
+
+					byte[] header = new byte[8];
+					if (stream.Read(header, 0, 8) != 8)
+						return false;
+
+					if (header[0] == 'U' && header[1] == 'n' && header[2] == 'i' && header[3] == 't' &&
+						header[4] == 'y' && header[5] == 'F' && header[6] == 'S')
+						return true;
+
+					if (header[0] == 'U' && header[1] == 'n' && header[2] == 'i' && header[3] == 't' &&
+						header[4] == 'y' && header[5] == 'R' && header[6] == 'a' && header[7] == 'w')
+						return true;
+
+					if (header[0] == 'U' && header[1] == 'n' && header[2] == 'i' && header[3] == 't' &&
+						header[4] == 'y' && header[5] == 'W' && header[6] == 'e' && header[7] == 'b')
+						return true;
+
+					return false;
+				}
+			}
+			catch
+			{
+				return false;
+			}
+		}
+
+		private static BundleLoadResult LoadBundle(FileInfo file)
+		{
+			try
+			{
+				if (!HasValidBundleSignature(file.FullName))
 					return new BundleLoadResult
 					{
 						FilePath = file.FullName,
-						Signature = signature,
 						Error = new InvalidDataException("File is not a valid Unity AssetBundle (missing UnityFS/UnityRaw/UnityWeb header)")
 					};
 
 				Assets assets = Assets.FromUnsafePath(file.FullName);
 				if (assets == null)
-					return new BundleLoadResult { FilePath = file.FullName, Signature = signature };
+					return new BundleLoadResult { FilePath = file.FullName };
 				return new BundleLoadResult
 				{
 					FilePath = file.FullName,
-					Signature = signature,
 					Bundle = assets.Bundle as AssetBundle
 				};
 			}
 			catch (Exception ex)
 			{
-				return new BundleLoadResult { FilePath = file.FullName, Signature = signature, Error = ex };
+				return new BundleLoadResult { FilePath = file.FullName, Error = ex };
 			}
 		}
 
 		private struct BundleLoadResult
 		{
 			public string FilePath;
-			public string Signature;
 			public AssetBundle Bundle;
 			public Exception Error;
 		}
