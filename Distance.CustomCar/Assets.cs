@@ -66,10 +66,7 @@ namespace Distance.CustomCar
         {
             try
             {
-                var assetBundle = AssetBundleBridge.LoadFrom(FilePath);
-                Mod.Log.LogInfo($"Loaded asset bundle {FilePath}");
-
-                return assetBundle;
+                return AssetBundleBridge.LoadFrom(FilePath);
             }
             catch (Exception ex)
             {
@@ -81,15 +78,18 @@ namespace Distance.CustomCar
 
     internal static class AssetBundleBridge
     {
-        public static Type AssetBundleType => Kernel.FindTypeByFullName(
-            "UnityEngine.AssetBundle",
-            "UnityEngine"
-        );
+        private static Type _assetBundleType;
+        private static MethodInfo _loadFromFile;
 
-        private static MethodInfo LoadFromFile => AssetBundleType.GetMethod(
-            "LoadFromFile",
-            new[] { typeof(string) }
-        );
+        static AssetBundleBridge()
+        {
+            _assetBundleType = Kernel.FindTypeByFullName("UnityEngine.AssetBundle", "UnityEngine");
+            _loadFromFile = _assetBundleType.GetMethod("LoadFromFile", new[] { typeof(string) });
+        }
+
+        public static Type AssetBundleType => _assetBundleType;
+
+        private static MethodInfo LoadFromFile => _loadFromFile;
 
         public static object LoadFrom(string path)
         {

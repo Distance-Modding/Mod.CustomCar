@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using UnityEngine;
 
 namespace Distance.CustomCar.Data.Car
@@ -14,6 +15,7 @@ namespace Distance.CustomCar.Data.Car
 		public void CreateCars(CarInfos infos)
 		{
 			infos_ = infos;
+
 			Dictionary<string, GameObject> cars = LoadAssetsBundles();
 
 			List<CreateCarReturnInfos> carsInfos = new List<CreateCarReturnInfos>();
@@ -117,7 +119,6 @@ namespace Distance.CustomCar.Data.Car
 		private Dictionary<string, GameObject> LoadAssetsBundles()
 		{
 			Dictionary<string, GameObject> assetsList = new Dictionary<string, GameObject>();
-			DirectoryInfo assetsDirectory = GetLocalFolder("Assets");
 			DirectoryInfo globalCarsDirectory = new DirectoryInfo(Path.Combine(Resource.personalDistanceDirPath_, "CustomCars"));
 
 			if (!globalCarsDirectory.Exists)
@@ -135,146 +136,201 @@ namespace Distance.CustomCar.Data.Car
 				}
 			}
 
-			/*try
-			{
-				foreach (FileInfo assetsFile in assetsDirectory.GetFiles("*", SearchOption.AllDirectories).Concat(globalCarsDirectory.GetFiles("*", SearchOption.AllDirectories)).OrderBy(x => x.Name))
-				{
-					try
-					{
-						Assets assets = Assets.FromUnsafePath(assetsFile.FullName);
-						AssetBundle bundle = assets.Bundle as AssetBundle;
-
-
-						int foundPrefabCount = 0;
-
-						foreach (string assetName in from name in bundle.GetAllAssetNames() where name.EndsWith(".prefab", StringComparison.InvariantCultureIgnoreCase) select name)
-						{
-							GameObject carPrefab = bundle.LoadAsset<GameObject>(assetName);
-
-							string assetKey = $"{assetsFile.FullName} ({assetName})";
-
-							if (!assetsList.ContainsKey(assetKey))
-							{
-								assetsList.Add(assetKey, carPrefab);
-								foundPrefabCount++;
-							}
-						}
-
-						if (foundPrefabCount == 0)
-						{
-							Mod.Instance.Errors.Add($"Can't find a prefab in the asset bundle: {assetsFile.FullName}");
-							Mod.Log.LogError($"Can't find a prefab in the asset bundle: {assetsFile.FullName}");
-						}
-					}
-					catch (Exception ex)
-					{
-						Mod.Instance.Errors.Add($"Could not load assets file: {assetsFile.FullName}");
-						Mod.Log.LogError($"Could not load assets file: {assetsFile.FullName}");
-						Mod.Instance.Errors.Add(ex);
-						Mod.Log.LogError(ex);
-					}
-				}
-			}
-			catch(Exception ex)
-            {
-				Mod.Log.LogWarning("No Assets folder in the custom car folder.");
-            }*/
-
-			/*try
-            {
-				DirectoryInfo otherAssetsDirectory = new DirectoryInfo(Path.Combine(Directory.GetParent(Directory.GetParent(Path.GetDirectoryName(System.Reflection.Assembly.GetCallingAssembly().Location)).ToString()).ToString(), "Assets"));
-
-				foreach (FileInfo assetsFile in otherAssetsDirectory.GetFiles("*", SearchOption.AllDirectories).Concat(globalCarsDirectory.GetFiles("*", SearchOption.AllDirectories)).OrderBy(x => x.Name))
-				{
-					try
-                    {
-						Assets assets = Assets.FromUnsafePath(assetsFile.FullName);
-						AssetBundle bundle = assets.Bundle as AssetBundle;
-
-						int foundPrefabCount = 0;
-
-						foreach (string assetName in from name in bundle.GetAllAssetNames() where name.EndsWith(".prefab", StringComparison.InvariantCultureIgnoreCase) select name)
-                        {
-							GameObject carPrefab = bundle.LoadAsset<GameObject>(assetName);
-
-							string assetKey = $"{assetsFile.FullName} ({assetName})";
-
-							if (!assetsList.ContainsKey(assetKey))
-							{
-								assetsList.Add(assetKey, carPrefab);
-								foundPrefabCount++;
-							}
-						}
-
-						if (foundPrefabCount == 0)
-						{
-							Mod.Instance.Errors.Add($"Can't find a prefab in the asset bundle: {assetsFile.FullName}");
-							Mod.Log.LogError($"Can't find a prefab in the asset bundle: {assetsFile.FullName}");
-						}
-					}
-					catch (Exception ex)
-                    {
-						Mod.Instance.Errors.Add($"Could not load assets file: {assetsFile.FullName}");
-						Mod.Log.LogError($"Could not load assets file: {assetsFile.FullName}");
-						Mod.Instance.Errors.Add(ex);
-						Mod.Log.LogError(ex);
-					}
-				}
-			}
-			catch (Exception ex)
-            {
-				Mod.Log.LogWarning($"No Assets folder in toplevel directory.");
-            }*/
+			PrefabIndex prefabIndex = new PrefabIndex();
+			prefabIndex.Load();
 
 			DirectoryInfo profileDirectory = new DirectoryInfo(Directory.GetParent(Path.GetDirectoryName(System.Reflection.Assembly.GetCallingAssembly().Location)).ToString());
 
-			foreach (FileInfo assetsFile in profileDirectory.GetFiles("*", SearchOption.AllDirectories).Concat(globalCarsDirectory.GetFiles("*", SearchOption.AllDirectories)).OrderBy(x => x.Name))
+			List<FileInfo> rawFiles = new List<FileInfo>();
+			foreach (FileInfo f in profileDirectory.GetFiles("*", SearchOption.AllDirectories).Concat(globalCarsDirectory.GetFiles("*", SearchOption.AllDirectories)).OrderBy(x => x.Name))
 			{
-				if (assetsFile.Extension == "")
-                {
-					try
+				if (f.Extension == "" && HasValidBundleSignature(f.FullName))
+					rawFiles.Add(f);
+			}
+
+			List<FileInfo> validFiles = rawFiles;
+			HashSet<string> seenPaths = new HashSet<string>();
+
+			int batchSize = Math.Max(4, Environment.ProcessorCount);
+			int totalBatches = (validFiles.Count + batchSize - 1) / batchSize;
+			for (int batchStart = 0; batchStart < validFiles.Count; batchStart += batchSize)
+			{
+				int batchEnd = Math.Min(batchStart + batchSize, validFiles.Count);
+				Mod.Log.LogInfo($"Batch {batchStart / batchSize + 1}/{totalBatches} ({batchEnd - batchStart} files)");
+				BundleLoadResult[] batchResults = new BundleLoadResult[batchEnd - batchStart];
+				int batchCount = batchResults.Length;
+				int loaded = 0;
+				using (ManualResetEvent batchDone = new ManualResetEvent(false))
+				{
+					for (int i = 0; i < batchCount; i++)
 					{
-						Assets assets = Assets.FromUnsafePath(assetsFile.FullName);
-						AssetBundle bundle = assets.Bundle as AssetBundle;
-
-						int foundPrefabCount = 0;
-
-						foreach (string assetName in from name in bundle.GetAllAssetNames() where name.EndsWith(".prefab", StringComparison.InvariantCultureIgnoreCase) select name)
+						int index = i;
+						FileInfo file = validFiles[batchStart + i];
+						ThreadPool.QueueUserWorkItem(_ =>
 						{
-							GameObject carPrefab = bundle.LoadAsset<GameObject>(assetName);
-
-							string assetKey = $"{assetsFile.FullName} ({assetName})";
-
-							if (!assetsList.ContainsKey(assetKey))
+							batchResults[index] = LoadBundle(file);
+							if (Interlocked.Increment(ref loaded) == batchCount)
+								batchDone.Set();
+						});
+					}
+					if (!batchDone.WaitOne(30000))
+					{
+						Mod.Log.LogWarning($"Bundle batch {(batchStart / batchSize) + 1} timed out after 30s — incomplete results will be skipped.");
+						for (int i = 0; i < batchCount; i++)
+						{
+							if (batchResults[i].FilePath == null)
 							{
-								assetsList.Add(assetKey, carPrefab);
-								foundPrefabCount++;
+								batchResults[i] = new BundleLoadResult
+								{
+									FilePath = validFiles[batchStart + i].FullName,
+									Error = new TimeoutException("Bundle loading timed out after 30 seconds — the file may be corrupted")
+								};
 							}
 						}
+					}
+				}
 
-						if (foundPrefabCount == 0)
+				foreach (BundleLoadResult result in batchResults)
+				{
+					string filePath = result.FilePath;
+					seenPaths.Add(filePath);
+
+					if (result.Bundle == null)
+					{
+						Mod.Instance.Errors.Add($"Could not load assets file: {filePath}");
+						Mod.Log.LogError($"Could not load assets file: {filePath}");
+						if (result.Error != null)
 						{
-							Mod.Instance.Errors.Add($"Can't find a prefab in the asset bundle: {assetsFile.FullName}");
-							Mod.Log.LogError($"Can't find a prefab in the asset bundle: {assetsFile.FullName}");
+							Mod.Instance.Errors.Add(result.Error);
+							Mod.Log.LogError(result.Error);
+						}
+						continue;
+					}
+
+					AssetBundle bundle = result.Bundle;
+					string[] prefabNames;
+
+					if (prefabIndex.IsUpToDate(filePath))
+					{
+						prefabNames = prefabIndex.GetPrefabNames(filePath);
+						if (prefabNames == null || prefabNames.Length == 0)
+							prefabNames = ScanBundleForPrefabs(bundle);
+					}
+					else
+					{
+						prefabNames = ScanBundleForPrefabs(bundle);
+						if (prefabNames.Length > 0)
+							Mod.Log.LogInfo($"Scanned: {Path.GetFileName(filePath)} ({prefabNames.Length} prefab(s))");
+					}
+
+					prefabIndex.SetPrefabNames(filePath, prefabNames);
+
+					int foundPrefabCount = 0;
+					foreach (string assetName in prefabNames)
+					{
+						GameObject carPrefab = bundle.LoadAsset<GameObject>(assetName);
+						string assetKey = $"{filePath} ({assetName})";
+						if (!assetsList.ContainsKey(assetKey))
+						{
+							assetsList.Add(assetKey, carPrefab);
+							foundPrefabCount++;
 						}
 					}
-					catch (Exception ex)
+
+					if (foundPrefabCount == 0)
 					{
-						Mod.Instance.Errors.Add($"Could not load assets file: {assetsFile.FullName}");
-						Mod.Log.LogError($"Could not load assets file: {assetsFile.FullName}");
-						Mod.Instance.Errors.Add(ex);
-						Mod.Log.LogError(ex);
+						Mod.Instance.Errors.Add($"Can't find a prefab in the asset bundle: {filePath}");
+						Mod.Log.LogError($"Can't find a prefab in the asset bundle: {filePath}");
 					}
+
+					bundle.Unload(false);
 				}
 			}
 
+			Mod.Log.LogInfo($"{assetsList.Count} prefab(s) loaded from {seenPaths.Count} file(s)");
+			prefabIndex.RemoveStaleEntries(seenPaths);
+			prefabIndex.Save();
 			return assetsList;
 		}
 
-		public DirectoryInfo GetLocalFolder(string dir)
+		private static bool HasValidBundleSignature(string filePath)
 		{
-			FileSystem files = new FileSystem();
-			return new DirectoryInfo(Path.GetDirectoryName(Path.Combine(files.RootDirectory, dir + (dir.EndsWith($"{Path.DirectorySeparatorChar}") ? string.Empty : $"{Path.DirectorySeparatorChar}"))));
+			try
+			{
+				using (var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+				{
+					if (stream.Length < 8)
+						return false;
+
+					byte[] header = new byte[8];
+					if (stream.Read(header, 0, 8) != 8)
+						return false;
+
+					if (header[0] == 'U' && header[1] == 'n' && header[2] == 'i' && header[3] == 't' &&
+						header[4] == 'y' && header[5] == 'F' && header[6] == 'S')
+						return true;
+
+					if (header[0] == 'U' && header[1] == 'n' && header[2] == 'i' && header[3] == 't' &&
+						header[4] == 'y' && header[5] == 'R' && header[6] == 'a' && header[7] == 'w')
+						return true;
+
+					if (header[0] == 'U' && header[1] == 'n' && header[2] == 'i' && header[3] == 't' &&
+						header[4] == 'y' && header[5] == 'W' && header[6] == 'e' && header[7] == 'b')
+						return true;
+
+					return false;
+				}
+			}
+			catch
+			{
+				return false;
+			}
+		}
+
+		private static BundleLoadResult LoadBundle(FileInfo file)
+		{
+			try
+			{
+				if (!HasValidBundleSignature(file.FullName))
+					return new BundleLoadResult
+					{
+						FilePath = file.FullName,
+						Error = new InvalidDataException("File is not a valid Unity AssetBundle (missing UnityFS/UnityRaw/UnityWeb header)")
+					};
+
+				Assets assets = Assets.FromUnsafePath(file.FullName);
+				if (assets == null)
+					return new BundleLoadResult { FilePath = file.FullName };
+				return new BundleLoadResult
+				{
+					FilePath = file.FullName,
+					Bundle = assets.Bundle as AssetBundle
+				};
+			}
+			catch (Exception ex)
+			{
+				return new BundleLoadResult { FilePath = file.FullName, Error = ex };
+			}
+		}
+
+		private struct BundleLoadResult
+		{
+			public string FilePath;
+			public AssetBundle Bundle;
+			public Exception Error;
+		}
+
+		private static string[] ScanBundleForPrefabs(AssetBundle bundle)
+		{
+			List<string> prefabs = new List<string>();
+			foreach (string assetName in bundle.GetAllAssetNames())
+			{
+				if (assetName.EndsWith(".prefab", StringComparison.InvariantCultureIgnoreCase))
+				{
+					prefabs.Add(assetName);
+				}
+			}
+			return prefabs.ToArray();
 		}
 
 		private CreateCarReturnInfos CreateCar(GameObject car)
@@ -377,8 +433,10 @@ namespace Distance.CustomCar.Data.Car
 
 			FillMaterialInfos(renderer, materialNames, materialProperties);
 
-			Material[] materials = renderer.materials.ToArray();
-			for (int materialIndex = 0; materialIndex < renderer.materials.Length; materialIndex++)
+			Material[] originalMaterials = renderer.materials;
+			Material[] materials = new Material[originalMaterials.Length];
+			Array.Copy(originalMaterials, materials, originalMaterials.Length);
+			for (int materialIndex = 0; materialIndex < originalMaterials.Length; materialIndex++)
 			{
 				if (!infos_.materials.TryGetValue(materialNames[materialIndex], out MaterialInfos materialInfo))
 				{
@@ -395,22 +453,22 @@ namespace Distance.CustomCar.Data.Car
 				Material material = UnityEngine.Object.Instantiate(materialInfo.material);
 				if (materialInfo.diffuseIndex >= 0)
 				{
-					material.SetTexture(materialInfo.diffuseIndex, renderer.materials[materialIndex].GetTexture("_MainTex"));
+					material.SetTexture(materialInfo.diffuseIndex, originalMaterials[materialIndex].GetTexture("_MainTex"));
 				}
 
 				if (materialInfo.normalIndex >= 0)
 				{
-					material.SetTexture(materialInfo.normalIndex, renderer.materials[materialIndex].GetTexture("_BumpMap"));
+					material.SetTexture(materialInfo.normalIndex, originalMaterials[materialIndex].GetTexture("_BumpMap"));
 				}
 
 				if (materialInfo.emitIndex >= 0)
 				{
-					material.SetTexture(materialInfo.emitIndex, renderer.materials[materialIndex].GetTexture("_EmissionMap"));
+					material.SetTexture(materialInfo.emitIndex, originalMaterials[materialIndex].GetTexture("_EmissionMap"));
 				}
 
 				foreach (MaterialPropertyExport property in materialProperties[materialIndex])
 				{
-					CopyMaterialProperty(renderer.materials[materialIndex], material, property);
+					CopyMaterialProperty(originalMaterials[materialIndex], material, property);
 				}
 
 				materials[materialIndex] = material;

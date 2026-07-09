@@ -62,6 +62,7 @@
     <Compile Include="Assets.cs" />
     <Compile Include="Data\Car\CarBuilder.cs" />
     <Compile Include="Data\Car\CarInfos.cs" />
+    <Compile Include="Data\Car\PrefabIndex.cs" />
     <Compile Include="Data\Car\CreateCarReturnInfos.cs" />
     <Compile Include="Data\Errors\ErrorList.cs" />
     <Compile Include="Data\Materials\MaterialInfos.cs" />
