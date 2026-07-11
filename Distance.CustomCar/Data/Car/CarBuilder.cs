@@ -74,6 +74,8 @@ namespace Distance.CustomCar.Data.Car
 					colors_ = carsInfos[infoIndex].colors
 				};
 
+				try
+			{
 				if (!knowCars.ContainsKey(car.name_) && !unlocked.ContainsKey(car.name_))
 				{
 					unlocked.Add(car.name_, carIndex);
@@ -87,26 +89,32 @@ namespace Distance.CustomCar.Data.Car
 					string uniqueID = $"#{Guid.NewGuid():B}";
 					Mod.Log.LogInfo($"Using GUID: {uniqueID}");
 
-					car.name_ = $"[FFFF00]![-] {car.name_} {uniqueID}";
+					car.name_ = $"{car.name_} {uniqueID}";
 
 					unlocked.Add(car.name_, carIndex);
 					knowCars.Add(car.name_, carIndex);
 				}
+			}
+			catch (ArgumentException ex)
+			{
+				Mod.Instance.Errors.Add($"Failed to register car '{car.name_}' — name collision despite uniqueness check.");
+				Mod.Log.LogError($"Failed to register car '{car.name_}' — name collision: {ex.Message}");
+			}
 
 				profileManager.carInfos_[carIndex] = car;
 			}
 
-			CarColors[] carColors = new CarColors[oldCars.Length + carsInfos.Count];
-			for (int colorIndex = 0; colorIndex < carColors.Length; colorIndex++)
-			{
-				carColors[colorIndex] = G.Sys.ProfileManager_.carInfos_[colorIndex].colors_;
-			}
 			for (int profileIndex = 0; profileIndex < profileManager.ProfileCount_; profileIndex++)
 			{
 				Profile profile = profileManager.GetProfile(profileIndex);
 
-				CarColors[] oldColorList = profile.carColorsList_;
+				CarColors[] carColors = new CarColors[oldCars.Length + carsInfos.Count];
+				for (int colorIndex = 0; colorIndex < carColors.Length; colorIndex++)
+				{
+					carColors[colorIndex] = G.Sys.ProfileManager_.carInfos_[colorIndex].colors_;
+				}
 
+				CarColors[] oldColorList = profile.carColorsList_;
 				for (int oldColorIndex = 0; oldColorIndex < oldColorList.Length && oldColorIndex < carColors.Length; oldColorIndex++)
 				{
 					carColors[oldColorIndex] = oldColorList[oldColorIndex];
@@ -119,9 +127,11 @@ namespace Distance.CustomCar.Data.Car
 		private Dictionary<string, GameObject> LoadAssetsBundles()
 		{
 			Dictionary<string, GameObject> assetsList = new Dictionary<string, GameObject>();
-			DirectoryInfo globalCarsDirectory = new DirectoryInfo(Path.Combine(Resource.personalDistanceDirPath_, "CustomCars"));
+			DirectoryInfo globalCarsDirectory = null;
+			if (!string.IsNullOrEmpty(Resource.personalDistanceDirPath_))
+				globalCarsDirectory = new DirectoryInfo(Path.Combine(Resource.personalDistanceDirPath_, "CustomCars"));
 
-			if (!globalCarsDirectory.Exists)
+			if (globalCarsDirectory != null && !globalCarsDirectory.Exists)
 			{
 				try
 				{
@@ -139,10 +149,14 @@ namespace Distance.CustomCar.Data.Car
 			PrefabIndex prefabIndex = new PrefabIndex();
 			prefabIndex.Load();
 
-			DirectoryInfo profileDirectory = new DirectoryInfo(Directory.GetParent(Path.GetDirectoryName(System.Reflection.Assembly.GetCallingAssembly().Location)).ToString());
+			DirectoryInfo profileDirectory = new DirectoryInfo(Directory.GetParent(Path.GetDirectoryName(typeof(CarBuilder).Assembly.Location)).ToString());
+
+			IEnumerable<FileInfo> allFiles = profileDirectory.GetFiles("*", SearchOption.AllDirectories);
+			if (globalCarsDirectory != null && globalCarsDirectory.Exists)
+				allFiles = allFiles.Concat(globalCarsDirectory.GetFiles("*", SearchOption.AllDirectories));
 
 			List<FileInfo> rawFiles = new List<FileInfo>();
-			foreach (FileInfo f in profileDirectory.GetFiles("*", SearchOption.AllDirectories).Concat(globalCarsDirectory.GetFiles("*", SearchOption.AllDirectories)).OrderBy(x => x.Name))
+			foreach (FileInfo f in allFiles.OrderBy(x => x.Name))
 			{
 				if (f.Extension == "" && HasValidBundleSignature(f.FullName))
 					rawFiles.Add(f);
@@ -160,32 +174,30 @@ namespace Distance.CustomCar.Data.Car
 				BundleLoadResult[] batchResults = new BundleLoadResult[batchEnd - batchStart];
 				int batchCount = batchResults.Length;
 				int loaded = 0;
-				using (ManualResetEvent batchDone = new ManualResetEvent(false))
+				ManualResetEvent batchDone = new ManualResetEvent(false);
+				for (int i = 0; i < batchCount; i++)
 				{
+					int index = i;
+					FileInfo file = validFiles[batchStart + i];
+					ThreadPool.QueueUserWorkItem(_ =>
+					{
+						batchResults[index] = LoadBundle(file);
+						if (Interlocked.Increment(ref loaded) == batchCount)
+							batchDone.Set();
+					});
+				}
+				if (!batchDone.WaitOne(30000))
+				{
+					Mod.Log.LogWarning($"Bundle batch {(batchStart / batchSize) + 1} timed out after 30s — incomplete results will be skipped.");
 					for (int i = 0; i < batchCount; i++)
 					{
-						int index = i;
-						FileInfo file = validFiles[batchStart + i];
-						ThreadPool.QueueUserWorkItem(_ =>
+						if (batchResults[i].FilePath == null)
 						{
-							batchResults[index] = LoadBundle(file);
-							if (Interlocked.Increment(ref loaded) == batchCount)
-								batchDone.Set();
-						});
-					}
-					if (!batchDone.WaitOne(30000))
-					{
-						Mod.Log.LogWarning($"Bundle batch {(batchStart / batchSize) + 1} timed out after 30s — incomplete results will be skipped.");
-						for (int i = 0; i < batchCount; i++)
-						{
-							if (batchResults[i].FilePath == null)
+							batchResults[i] = new BundleLoadResult
 							{
-								batchResults[i] = new BundleLoadResult
-								{
-									FilePath = validFiles[batchStart + i].FullName,
-									Error = new TimeoutException("Bundle loading timed out after 30 seconds — the file may be corrupted")
-								};
-							}
+								FilePath = validFiles[batchStart + i].FullName,
+								Error = new TimeoutException("Bundle loading timed out after 30 seconds — the file may be corrupted")
+							};
 						}
 					}
 				}
@@ -280,6 +292,16 @@ namespace Distance.CustomCar.Data.Car
 
 					return false;
 				}
+			}
+			catch (IOException ex)
+			{
+				Mod.Log.LogWarning($"Could not read file for signature check: {filePath} — {ex.Message}");
+				return false;
+			}
+			catch (UnauthorizedAccessException ex)
+			{
+				Mod.Log.LogWarning($"Access denied reading file for signature check: {filePath} — {ex.Message}");
+				return false;
 			}
 			catch
 			{
@@ -733,7 +755,7 @@ namespace Distance.CustomCar.Data.Car
 			if (visuals == null)
 			{
 				Mod.Instance.Errors.Add("Can't find the CarVisuals component on the base car");
-				Mod.Log.LogInfo("Can't find the CarVisuals component on the base car");
+				Mod.Log.LogError("Can't find the CarVisuals component on the base car");
 				return;
 			}
 
@@ -766,8 +788,8 @@ namespace Distance.CustomCar.Data.Car
 
 			if (!mesh.isReadable)
 			{
-				Mod.Instance.Errors.Add($"Can't read the car mesh {mesh.name} on {renderer.gameObject.FullName()}You must allow reading on it's unity inspector !");
-				Mod.Log.LogError($"Can't read the car mesh {mesh.name} on {renderer.gameObject.FullName()}You must allow reading on it's unity inspector !");
+				Mod.Instance.Errors.Add($"Can't read the car mesh {mesh.name} on {renderer.gameObject.FullName()}You must allow reading on its Unity inspector!");
+				Mod.Log.LogError($"Can't read the car mesh {mesh.name} on {renderer.gameObject.FullName()}You must allow reading on its Unity inspector!");
 				return;
 			}
 
@@ -963,6 +985,10 @@ namespace Distance.CustomCar.Data.Car
 						{
 							visual.wheelBR_ = comp;
 						}
+					}
+					else
+					{
+						Mod.Log.LogWarning($"Wheel '{name}' on {car.gameObject.FullName()} has no direction keyword (front/back)");
 					}
 				}
 			}

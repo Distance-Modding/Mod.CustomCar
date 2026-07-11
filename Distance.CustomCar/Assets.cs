@@ -62,18 +62,18 @@ namespace Distance.CustomCar
             return ret;
         }
 
-        private object Load()
-        {
-            try
-            {
-                return AssetBundleBridge.LoadFrom(FilePath);
-            }
-            catch (Exception ex)
-            {
-                Mod.Log.LogInfo(ex);
-                return null;
-            }
-        }
+		private object Load()
+		{
+			try
+			{
+				return AssetBundleBridge.LoadFrom(FilePath);
+			}
+			catch (Exception ex)
+			{
+				Mod.Log.LogWarning($"AssetBundle.LoadFromFile failed: {ex.Message}");
+				return null;
+			}
+		}
     }
 
     internal static class AssetBundleBridge

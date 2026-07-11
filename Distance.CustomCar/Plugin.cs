@@ -64,19 +64,29 @@ namespace Distance.CustomCar
 
         public void Start()
         {
-            ProfileManager profileManager = G.Sys.ProfileManager_;
-            DefaultCarCount = profileManager.CarInfos_.Length;
+            try
+            {
+                ProfileManager profileManager = G.Sys.ProfileManager_;
+                if (profileManager == null)
+                {
+                    Mod.Log.LogError("ProfileManager is not available — cannot load cars");
+                    return;
+                }
+                DefaultCarCount = profileManager.CarInfos_.Length;
 
-            CarInfos carInfos = new CarInfos();
-            carInfos.CollectInfos();
-            CarBuilder carBuilder = new CarBuilder();
+                CarInfos carInfos = new CarInfos();
+                carInfos.CollectInfos();
+                CarBuilder carBuilder = new CarBuilder();
 
-            carBuilder.CreateCars(carInfos);
-            
-            TotalCarCount = profileManager.CarInfos_.Length;
-            CarColors.LoadAll();
+                carBuilder.CreateCars(carInfos);
 
-            Errors.Show();
+                TotalCarCount = profileManager.CarInfos_.Length;
+                CarColors.LoadAll();
+            }
+            catch (Exception ex)
+            {
+                Mod.Log.LogError($"Failed to load custom cars: {ex}");
+            }
         }
 
         private void OnEnable()

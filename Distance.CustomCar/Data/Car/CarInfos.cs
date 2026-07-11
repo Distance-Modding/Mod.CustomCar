@@ -24,14 +24,20 @@ namespace Distance.CustomCar.Data.Car
 
 		private void GetBaseCar()
 		{
-			var prefab = G.Sys.ProfileManager_.carInfos_[0].prefabs_.carPrefab_;
+			var carInfos = G.Sys.ProfileManager_.carInfos_;
+			if (carInfos == null || carInfos.Length < 1)
+			{
+				Mod.Instance.Errors.Add("No cars registered in profile manager — cannot load base car");
+				return;
+			}
+			var prefab = carInfos[0].prefabs_.carPrefab_;
 			if (prefab == null)
 			{
 				Mod.Instance.Errors.Add("Can't find the refractor base car prefab");
 				return;
 			}
 			baseCar = prefab;
-			defaultColors = G.Sys.ProfileManager_.carInfos_[0].colors_;
+			defaultColors = carInfos[0].colors_;
 		}
 
 		private void GetJetsAndTrail()
@@ -59,7 +65,8 @@ namespace Distance.CustomCar.Data.Car
 				}
 			}
 
-			wingTrail = baseCar.GetComponentInChildren<WingTrail>().gameObject;
+			var wingTrailComp = baseCar.GetComponentInChildren<WingTrail>();
+			wingTrail = wingTrailComp != null ? wingTrailComp.gameObject : null;
 
 			if (boostJet == null)
 			{
